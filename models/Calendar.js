@@ -32,6 +32,8 @@ Calendar.init(
     },
     {
         sequelize,
-        modelName: "calendar",
+        modelName: "Calendar",
     }
 );
+
+module.exports = Calendar;

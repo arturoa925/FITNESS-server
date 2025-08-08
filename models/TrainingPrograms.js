@@ -1,9 +1,9 @@
 const { Model, DataTypes, Sequelize } = require("sequelize");
 const sequelize = require("../config/connection");
 
-class trainingProgram extends Model {}
+class TrainingPrograms extends Model {}
 
-trainingProgram.init(
+TrainingPrograms.init(
     {
         id: {
             type: DataTypes.UUID,
@@ -35,6 +35,8 @@ trainingProgram.init(
     },
     {
         sequelize,
-        modelName: "trainingProgram",
+        modelName: "TrainingPrograms",
     }
 );
+
+module.exports = TrainingPrograms;

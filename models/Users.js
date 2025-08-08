@@ -1,13 +1,13 @@
 const sequelize = require("../config/connection");
 const bcrypt = require("bcryptjs");
 
-class User extends Model {
+class Users extends Model {
     async validPassword(password) {
         return bcrypt.compare(password, this.password);
     }
 }
 
-User.init(
+Users.init(
     {
         id: {
             type: DataTypes.UUID,
@@ -66,5 +66,5 @@ User.init(
     } 
 ); 
 
-module.exports = User;
+module.exports = Users;
 

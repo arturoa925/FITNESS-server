@@ -23,6 +23,8 @@ DailyWorkout.init(
     },
     {
         sequelize,
-        modelName: "dailyWorkout",
+        modelName: "DailyWorkout",
     }
 );
+
+module.exports = DailyWorkout;
