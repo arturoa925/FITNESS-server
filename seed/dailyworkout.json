@@ -1,0 +1,65 @@
+
+
+[
+  {
+    "exercises": [
+      { "name": "Push-ups", "type": "strength", "sets": 3, "reps": 15, "restSec": 60, "notes": "Keep core tight" },
+      { "name": "Bodyweight Squats", "type": "strength", "sets": 3, "reps": 20, "restSec": 60 },
+      { "name": "Plank", "type": "core", "sets": 3, "durationSec": 45, "restSec": 45 }
+    ],
+    "createdAt": "2025-08-01T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Dumbbell Bench Press", "type": "strength", "sets": 4, "reps": 10, "weightKg": 20, "restSec": 90, "photoUrl": "https://images.example.com/exercises/db-bench.jpg" },
+      { "name": "Bent-over Row", "type": "strength", "sets": 4, "reps": 10, "weightKg": 25, "restSec": 90 },
+      { "name": "Hollow Hold", "type": "core", "sets": 3, "durationSec": 30, "restSec": 45 }
+    ],
+    "createdAt": "2025-08-02T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Interval Run", "type": "cardio", "intervals": 6, "workSec": 60, "restSec": 60, "notes": "RPE 8 on work" },
+      { "name": "Calf Raises", "type": "strength", "sets": 3, "reps": 20, "restSec": 45 }
+    ],
+    "createdAt": "2025-08-03T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Kettlebell Swings", "type": "strength", "sets": 5, "reps": 15, "weightKg": 16, "restSec": 60 },
+      { "name": "Goblet Squat", "type": "strength", "sets": 4, "reps": 12, "weightKg": 20, "restSec": 90 },
+      { "name": "Side Plank", "type": "core", "sets": 3, "durationSec": 30, "restSec": 30 }
+    ],
+    "createdAt": "2025-08-04T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Pull-ups", "type": "strength", "sets": 4, "reps": "AMRAP", "restSec": 120 },
+      { "name": "Overhead Press", "type": "strength", "sets": 4, "reps": 8, "weightKg": 18, "restSec": 90 },
+      { "name": "Farmer's Carry", "type": "conditioning", "sets": 3, "distanceM": 40, "weightKgPerHand": 20, "restSec": 60 }
+    ],
+    "createdAt": "2025-08-05T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Rowing Machine", "type": "cardio", "durationMin": 20, "avgSplit": "2:10/500m" },
+      { "name": "Romanian Deadlift", "type": "strength", "sets": 4, "reps": 10, "weightKg": 40, "restSec": 120 }
+    ],
+    "createdAt": "2025-08-06T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Bench Press", "type": "strength", "sets": 5, "reps": 5, "weightKg": 60, "restSec": 150, "tempo": "3-1-1" },
+      { "name": "Barbell Row", "type": "strength", "sets": 5, "reps": 5, "weightKg": 60, "restSec": 150 },
+      { "name": "Face Pulls", "type": "accessory", "sets": 3, "reps": 15, "restSec": 60 }
+    ],
+    "createdAt": "2025-08-07T09:00:00.000Z"
+  },
+  {
+    "exercises": [
+      { "name": "Yoga Flow", "type": "mobility", "durationMin": 30, "notes": "Focus on hips & T-spine" },
+      { "name": "Core Circuit", "type": "core", "rounds": 3, "items": ["Dead Bug 12/side", "Side Plank 30s/side", "Bird Dog 12/side"] }
+    ],
+    "createdAt": "2025-08-08T09:00:00.000Z"
+  }
+]

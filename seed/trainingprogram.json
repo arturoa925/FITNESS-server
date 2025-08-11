@@ -1,0 +1,127 @@
+
+
+[
+  {
+    "name": "Hypertrophy Split",
+    "description": "4-week push/pull/legs rotation focusing on volume and mind-muscle connection.",
+    "duration": 4,
+    "workouts": [
+      { "weekIndex": 0, "days": [
+        { "dayIndex": 0, "title": "Push A", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push A", "exercises": [
+            { "name": "Bench Press", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Incline DB Press", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "Overhead Press", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Lateral Raise", "sets": 3, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Pull A", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull A", "exercises": [
+            { "name": "Barbell Row", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Lat Pulldown", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "Face Pulls", "sets": 3, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Legs A", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day A", "exercises": [
+            { "name": "Back Squat", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "RDL", "sets": 3, "reps": 10, "restSec": 120 },
+            { "name": "Leg Press", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "Push B", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push B", "exercises": [
+            { "name": "Incline Bench Press", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "DB Shoulder Press", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Cable Fly", "sets": 3, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Pull B", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull B", "exercises": [
+            { "name": "Pull-ups", "sets": 4, "reps": "AMRAP", "restSec": 120 },
+            { "name": "Seated Row", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Legs B", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day B", "exercises": [
+            { "name": "Front Squat", "sets": 4, "reps": 6, "restSec": 150 },
+            { "name": "Leg Curl", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "Walking Lunges", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  {
+    "name": "Beginner Full-Body",
+    "description": "2-week full-body routine emphasizing form, consistency, and recovery.",
+    "duration": 2,
+    "workouts": [
+      { "weekIndex": 0, "days": [
+        { "dayIndex": 0, "title": "Full Body A", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body A", "exercises": [
+            { "name": "Goblet Squat", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "DB Bench Press", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "One-arm Row", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "Plank", "sets": 3, "durationSec": 45, "restSec": 45 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Full Body B", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body B", "exercises": [
+            { "name": "Hip Hinge (RDL)", "sets": 3, "reps": 10, "restSec": 120 },
+            { "name": "Overhead Press", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Lat Pulldown", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "Full Body A+", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body A+", "exercises": [
+            { "name": "Goblet Squat", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "DB Bench Press", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Cable Row", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Full Body B+", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body B+", "exercises": [
+            { "name": "RDL", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "Overhead Press", "sets": 4, "reps": 8, "restSec": 90 },
+            { "name": "Pull-ups (banded)", "sets": 3, "reps": 8, "restSec": 120 }
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  {
+    "name": "Kettlebell Burner",
+    "description": "3-week kettlebell flow for conditioning and strength endurance.",
+    "duration": 3,
+    "workouts": [
+      { "weekIndex": 0, "days": [
+        { "dayIndex": 0, "title": "KB Flow A", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press", "exercises": [
+            { "name": "KB Swings", "sets": 5, "reps": 15, "weightKg": 16, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 4, "reps": 8, "weightKg": 12, "restSec": 90 },
+            { "name": "Goblet Squat", "sets": 4, "reps": 12, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "KB Flow B", "workouts": [
+          { "workoutIndex": 0, "name": "Complex", "exercises": [
+            { "name": "KB Deadlift", "sets": 4, "reps": 12, "weightKg": 24, "restSec": 90 },
+            { "name": "KB Row", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "KB Flow A+", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press+", "exercises": [
+            { "name": "KB Swings", "sets": 6, "reps": 15, "weightKg": 20, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]}
+      ]}
+    ]
+  }
+]
