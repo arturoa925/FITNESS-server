@@ -159,27 +159,6 @@ router.put("/:id", tokenauth, async (req, res) => {
 
 // * user training programs routes
 
-// create a new training program
-router.post("/:id/training-programs", tokenauth, async (req, res) => {
-    try {
-        const { name, description, workouts, duration } = req.body;
-
-        // Create new training program
-        const newTrainingProgram = await TrainingPrograms.create({
-            userId: req.params.id,
-            name,
-            description,
-            workouts,
-            duration,
-        });
-
-        res.status(201).json(newTrainingProgram);
-    } catch (error) {
-        console.error("Error creating training program:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-});
-
 // check if user has a training program
 router.get("/:id/training-programs", tokenauth, async (req, res) => {
     try {
@@ -242,7 +221,7 @@ router.get("/:id/daily-workout", tokenauth, async (req, res) => {
 
 // * user calendar routes
 
-// get user calendar entries with support for range/month queries
+// get user calendar entries with daily workouts and training programs (range + enrichment)
 router.get("/:id/calendar", tokenauth, async (req, res) => {
     try {
         const { from, to, month, year } = req.query;
@@ -252,7 +231,7 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
             where.date = { [Op.between]: [from, to] };
         } else if (month && year) {
             const mm = String(month).padStart(2, "0");
-            // Entries are stored as DATEONLY (YYYY-MM-DD)
+            // Entries stored as DATEONLY (YYYY-MM-DD)
             where.date = { [Op.between]: [`${year}-${mm}-01`, `${year}-${mm}-31`] };
         }
 
@@ -261,9 +240,53 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
             order: [["date", "ASC"]],
         });
 
-        res.status(200).json(calendars);
+        // Optionally enrich workouts with the user's current program, daily, and flags
+        const include = (req.query.include || "").split(",").map((s) => s.trim()).filter(Boolean);
+        const includeProgram = include.includes("program");
+        const includeDaily = include.includes("daily");
+        const includeFlags = include.includes("flags");
+
+        let programMeta = null;
+        if (includeProgram) {
+            const prog = await TrainingPrograms.findOne({ where: { userId: req.params.id } });
+            if (prog) {
+                programMeta = { id: prog.id, name: prog.name };
+            }
+        }
+        let dailyMeta = null;
+        if (includeDaily) {
+            const dailyPlan = await DailyWorkout.findOne({ where: { userId: req.params.id } });
+            if (dailyPlan) {
+                dailyMeta = { id: dailyPlan.id };
+                if (dailyPlan.name) dailyMeta.name = dailyPlan.name;
+            }
+        }
+
+        const enriched = calendars.map((entry) => {
+            const json = entry.toJSON();
+            const hasDaily = (json.workouts || []).some((w) => w.source === "daily");
+            const hasProgram = (json.workouts || []).some((w) => w.source === "program");
+
+            const workouts = (json.workouts || []).map((w) => {
+                if (includeProgram && w.source === "program" && programMeta) {
+                    return { ...w, program: programMeta };
+                }
+                if (includeDaily && w.source === "daily" && dailyMeta) {
+                    return { ...w, daily: dailyMeta };
+                }
+                return w;
+            });
+
+            const out = { ...json, workouts };
+            if (includeFlags) {
+                out.flags = { hasDaily, hasProgram, hasFood: (json.foods || []).length > 0 };
+            }
+            return out;
+        });
+
+        res.status(200).json(enriched);
     } catch (error) {
-        console.error("Error fetching calendar:", error);
+        console.error("Error fetching calendar entries:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -313,20 +336,8 @@ router.delete("/:id/calendar/:date/foods/:foodId", tokenauth, async (req, res) =
     }
 });
 
-// Add a workout entry to a specific day
-router.post("/:id/calendar/:date/workouts", tokenauth, async (req, res) => {
-    try {
-        const { workout } = req.body; // expect { id?, name, exercises: [...], notes?, source?, externalId? }
-        if (!workout) return res.status(400).json({ message: "Missing workout object" });
+// * create workout routes
 
-        const tagged = { source: workout.source || "manual", ...workout };
-        const calendar = await addWorkoutToCalendar(req.params.id, req.params.date, tagged);
-        res.status(200).json(calendar);
-    } catch (error) {
-        console.error("Error adding workout to calendar:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-});
 
 // Log a daily workout (convenience) and add to calendar
 router.post("/:id/daily-workout/log", tokenauth, async (req, res) => {
