@@ -157,6 +157,20 @@ router.put("/:id", tokenauth, async (req, res) => {
     }
 });
 
+// get all users
+router.get("/", async (req, res) => {
+    try {
+        const users = await Users.findAll({
+            attributes: { exclude: ["password"] },
+        });
+
+        res.status(200).json(users);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 // * user training programs routes
 
 // check if user has a training program
