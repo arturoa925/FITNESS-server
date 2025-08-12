@@ -1,7 +1,6 @@
-
-
 [
   {
+    "id": "2f3d9b22-9d85-4a58-9d3d-3a8e6a2f9c01",
     "name": "Hypertrophy Split",
     "description": "4-week push/pull/legs rotation focusing on volume and mind-muscle connection.",
     "duration": 4,
@@ -55,6 +54,7 @@
     ]
   },
   {
+    "id": "7a1f5e44-3b2a-4d20-9c17-d6379b61d2e2",
     "name": "Beginner Full-Body",
     "description": "2-week full-body routine emphasizing form, consistency, and recovery.",
     "duration": 2,
@@ -95,6 +95,7 @@
     ]
   },
   {
+    "id": "b9c8f4aa-6e3d-4f8a-9e7b-122aa3d9c4f5",
     "name": "Kettlebell Burner",
     "description": "3-week kettlebell flow for conditioning and strength endurance.",
     "duration": 3,

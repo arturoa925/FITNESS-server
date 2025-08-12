@@ -8,7 +8,13 @@ const tokenauth = require("../utils/tokenauth");
 require("dotenv").config();
 const { v4: uuidv4 } = require("uuid");
 
+
 const JWT_SECRET = process.env.JWT_SECRET;
+
+function normalizeEmail(body) {
+  const raw = body && typeof body.email === 'string' ? body.email.trim().toLowerCase() : null;
+  return raw && raw.length ? raw : null;
+}
 
 /**
  * Upsert a calendar entry and append a workout (with dedupe by externalId or id).
@@ -44,7 +50,11 @@ async function addWorkoutToCalendar(userId, date, workout) {
 
 router.post("/register", async (req, res) => {
     try {
-        const { firstName, lastName, email, password, profilePicture } = req.body;
+        const { firstName, lastName, password, profilePicture } = req.body || {};
+        const email = normalizeEmail(req.body);
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required" });
+        }
 
         // Check if user already exists
         const existingUser = await Users.findOne({ where: { email } });
@@ -76,33 +86,30 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
     try {
-        console.log("Request Body:", req.body);
-    
-        if (!req.body.email || !req.body.password) {
-          return res.status(400).json({ message: "Missing userName or password" });
+        const email = normalizeEmail(req.body);
+        if (!email || !req.body || !req.body.password) {
+          return res.status(400).json({ message: "Email and password are required" });
         }
 
-        const user = await Users.findOne({
-            where: { email: req.body.email },
-          });
+        const user = await Users.findOne({ where: { email } });
       
-          if (!user) {
+        if (!user) {
             return res.status(400).json({ message: "User not found" });
-          }
+        }
 
-          const validPassword = await bcrypt.compare(
+        const validPassword = await bcrypt.compare(
             req.body.password,
             user.password
-          );
+        );
       
-          if (!validPassword) {
+        if (!validPassword) {
             return res.status(400).json({ message: "Invalid password" });
-          }
+        }
 
-          // Generate JWT token
-            const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
+        // Generate JWT token
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
 
-            res.status(200).json({ token, user });
+        res.status(200).json({ token, user });
     } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -191,24 +198,48 @@ router.get("/:id/training-programs", tokenauth, async (req, res) => {
     }
 });
 
-// update user training program
-router.put("/:id/training-programs", tokenauth, async (req, res) => {
+// Upsert & switch user training program
+// If body contains { programId }, we copy fields from that template program and assign to the user (switch)
+// Otherwise, we update with whatever fields are provided (name, description, duration, workouts, ...)
+router.put("/:id/program/update", tokenauth, async (req, res) => {
     try {
-        const trainingProgram = await TrainingPrograms.findOne({
-            where: { userId: req.params.id },
-        });
+        const userId = req.params.id;
+        const { programId, ...patch } = req.body || {};
 
-        if (!trainingProgram) {
-            return res.status(404).json({ message: "Training program not found" });
+        let payload = { ...patch };
+
+        // If a template program id is provided, fetch it and copy its fields
+        if (programId) {
+            const template = await TrainingPrograms.findByPk(programId);
+            if (!template) {
+                return res.status(404).json({ message: "Template program not found" });
+            }
+            payload = {
+                name: template.name,
+                description: template.description,
+                duration: template.duration,
+                workouts: template.workouts,
+            };
         }
 
-        // Update training program details
-        const updatedProgram = await trainingProgram.update(req.body);
+        // Find existing user program (one per user)
+        const existing = await TrainingPrograms.findOne({ where: { userId } });
 
-        res.status(200).json(updatedProgram);
+        if (!existing) {
+            // Create a new program for user if none exists yet
+            const created = await TrainingPrograms.create({ userId, ...payload });
+            const status = programId ? 201 : 201;
+            const message = programId ? "Program assigned to user" : "Program created for user";
+            return res.status(status).json({ message, program: created });
+        }
+
+        // Update existing user program (switch or patch)
+        const updated = await existing.update(payload);
+        const message = programId ? "Program switched" : "Program updated";
+        return res.status(200).json({ message, program: updated });
     } catch (error) {
-        console.error("Error updating training program:", error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("Error upserting/switching training program:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -353,42 +384,85 @@ router.delete("/:id/calendar/:date/foods/:foodId", tokenauth, async (req, res) =
 // * create workout routes
 
 
-// Log a daily workout (convenience) and add to calendar
+// Log (or fetch) a daily workout by picking a random catalog item by id
+// If body contains { workoutId }, use that specific daily workout instead of random
+// If body contains { date }, it will be added to the user's calendar; otherwise it only returns the random workout
 router.post("/:id/daily-workout/log", tokenauth, async (req, res) => {
-    try {
-        const { date, workout } = req.body; // expect date: YYYY-MM-DD and workout object
-        if (!date || !workout) return res.status(400).json({ message: "Missing date or workout" });
+  try {
+    const { date, workoutId } = req.body || {};
 
-        const tagged = { source: "daily", ...workout };
-        const calendar = await addWorkoutToCalendar(req.params.id, date, tagged);
-        res.status(200).json(calendar);
-    } catch (error) {
-        console.error("Error logging daily workout:", error);
-        res.status(500).json({ message: "Internal server error" });
+    // Pick a specific template by id when provided, else a random one from the catalog
+    let template;
+    if (workoutId) {
+      template = await DailyWorkout.findByPk(workoutId);
+      if (!template) return res.status(404).json({ message: "Daily workout not found" });
+    } else {
+      template = await DailyWorkout.findOne({ order: sequelize.literal('RANDOM()') });
+      if (!template) return res.status(404).json({ message: "No daily workouts in catalog" });
     }
+
+    // Build the workout payload: keep the catalog id as templateId, give the calendar entry its own id
+    const tagged = {
+      source: 'daily',
+      templateId: template.id,
+      exercises: template.exercises
+    };
+
+    let calendar = null;
+    if (date) {
+      calendar = await addWorkoutToCalendar(req.params.id, date, tagged);
+    }
+
+    // Always return the selected workout; include calendar only if we logged it
+    return res.status(200).json({
+      workout: { id: template.id, exercises: template.exercises },
+      calendar
+    });
+  } catch (error) {
+    console.error("Error logging daily workout:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
-// Log a training program workout and add to calendar
-router.post("/:id/training-programs/:programId/workouts/log", tokenauth, async (req, res) => {
-    try {
-        const { date, workout, weekIndex, dayIndex, workoutIndex } = req.body;
-        if (!date || !workout) return res.status(400).json({ message: "Missing date or workout" });
 
-        const tagged = {
+// Choose a training program and add it to the calendar
+router.post("/:id/program/choose", tokenauth, async (req, res) => {
+    try {
+        const { programId, date } = req.body || {};
+
+        if (!programId || !date) {
+            return res.status(400).json({ message: "Program ID and date are required" });
+        }
+
+        const program = await TrainingPrograms.findByPk(programId);
+
+        if (!program) {
+            return res.status(404).json({ message: "Training program not found" });
+        }
+
+        // check if the user already has a training program
+        const existingProgram = await TrainingPrograms.findOne({
+            where: { userId: req.params.id },
+        });
+        if (existingProgram) {
+            return res.status(400).json({ message: "User already has a training program" });
+        }
+
+        const template = {
             source: "program",
-            programMeta: {
-                programId: req.params.programId,
-                weekIndex,
-                dayIndex,
-                workoutIndex,
-            },
-            ...workout,
+            templateId: program.id,
+            name: program.name,
+            exercises: program.exercises,
         };
 
-        const calendar = await addWorkoutToCalendar(req.params.id, date, tagged);
-        res.status(200).json(calendar);
+        let calendar = null;
+        if (date) {
+            calendar = await addWorkoutToCalendar(req.params.id, date, template);
+        }
+
+        res.status(200).json({ message: "Training program added to calendar", calendar });
     } catch (error) {
-        console.error("Error logging program workout:", error);
+        console.error("Error choosing training program:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
