@@ -43,6 +43,19 @@ Users.init(
             allowNull: true,
             defaultValue: "https://example.com/default-profile.png",
         },
+        provider: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        providerId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        isVerified: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: null,
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: true,
