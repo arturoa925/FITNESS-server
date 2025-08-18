@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 
 class Users extends Model {
     async validPassword(password) {
+        if (!this.password) return false; // OAuth/social users won't have a local password
         return bcrypt.compare(password, this.password);
     }
 }
@@ -33,7 +34,7 @@ Users.init(
         },
         password: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true, // Allow null for OAuth users
             validate: {
                 len: [8],
             },
@@ -67,17 +68,26 @@ Users.init(
 
         hooks: {
             beforeCreate: async (newUserData) => {
-                newUserData.password = await bcrypt.hash(newUserData.password, 10);
+                if (newUserData.password) {
+                    newUserData.password = await bcrypt.hash(newUserData.password, 10);
+                }
                 return newUserData;
             },
             beforeUpdate: async (updatedUserData) => {
-                if (updatedUserData.changed("password")) {
+                if (updatedUserData.changed("password") && updatedUserData.password) {
                     updatedUserData.password = await bcrypt.hash(updatedUserData.password, 10);
                 }
                 return updatedUserData;
             },
         },
-    } 
+        validate: {
+            passwordRequiredForLocal() {
+                if (!this.provider && !this.password) {
+                    throw new Error('Password required for local accounts');
+                }
+            },
+        },
+    }
 ); 
 
 module.exports = Users;

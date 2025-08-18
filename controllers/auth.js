@@ -18,30 +18,43 @@ const q = (obj) =>
 
 // 1) Kick off Google OAuth
 router.get("/google", (req, res) => {
-  const { GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI } = process.env;
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_REDIRECT_URI) {
+  // Trim envs to avoid invisible whitespace mismatches
+  const clientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+  const redirectUri = (process.env.GOOGLE_REDIRECT_URI || "").trim();
+
+  if (!clientId || !redirectUri) {
     return res.status(500).json({
       message: "Missing Google OAuth env vars",
       required: ["GOOGLE_CLIENT_ID", "GOOGLE_REDIRECT_URI"],
-      GOOGLE_CLIENT_ID_present: !!GOOGLE_CLIENT_ID,
-      GOOGLE_REDIRECT_URI_present: !!GOOGLE_REDIRECT_URI,
+      GOOGLE_CLIENT_ID_present: !!clientId,
+      GOOGLE_REDIRECT_URI_present: !!redirectUri,
     });
   }
 
   const state = req.query.state || ""; // consider signing a CSRF token for production
-  const params = {
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_REDIRECT_URI,
+
+  // Support a minimal param set for debugging 400s
+  const minimal = String(req.query.mode || "").toLowerCase() === "minimal";
+  // Always force account picker; keep consent during dev
+  const base = {
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
-    include_granted_scopes: "true",
-    access_type: "offline",   // remove if you don't need a refresh token
-    prompt: "consent",         // helpful in dev; you can drop in production
     state,
+    prompt: "select_account consent",
   };
+  const extras = minimal
+    ? {}
+    : {
+        include_granted_scopes: "true",
+        access_type: "offline", // remove if not needed
+      };
+
+  const params = { ...base, ...extras };
   const url = `https://accounts.google.com/o/oauth2/v2/auth?${q(params)}`;
 
-  // If you append ?debug=true, show the URL instead of redirecting (helps diagnose 400s)
+  // ?debug=true returns the full URL + params instead of redirecting
   if (String(req.query.debug).toLowerCase() === "true") {
     return res.status(200).json({ authorize_url: url, params });
   }
@@ -104,7 +117,7 @@ router.get("/google/callback", async (req, res) => {
         // Link the existing local account to Google
         await byEmail.update({
           provider, providerId,
-          emailVerified: profile.email_verified ?? byEmail.emailVerified,
+          isVerified: (profile.email_verified ?? byEmail.isVerified),
           profilePicture: profile.picture || byEmail.profilePicture
         });
         user = byEmail;
@@ -117,7 +130,7 @@ router.get("/google/callback", async (req, res) => {
         provider,
         providerId,
         email,
-        emailVerified: profile.email_verified ?? null,
+        isVerified: (profile.email_verified ?? null),
         firstName: profile.given_name || profile.name || "Google",
         lastName: profile.family_name || "",
         profilePicture: profile.picture || null,

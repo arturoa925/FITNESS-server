@@ -52,6 +52,41 @@ async function addWorkoutToCalendar(userId, date, workout) {
   return calendar;
 }
 
+// Build a stable synthetic workout id from indices (e.g., w:0-2-0)
+function buildWorkoutKey(weekIndex, dayIndex, workoutIndex) {
+  return `w:${Number(weekIndex)}-${Number(dayIndex)}-${Number(workoutIndex)}`;
+}
+
+// Given a program JSON and either explicit indices OR a synthetic id, find the workout and return refs
+function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex, workoutId }) {
+  if (!Array.isArray(programJson)) return null;
+
+  // If a synthetic id is supplied, parse it
+  if (workoutId && typeof workoutId === 'string' && workoutId.startsWith('w:')) {
+    const parts = workoutId.slice(2).split('-');
+    if (parts.length === 3) {
+      weekIndex = parseInt(parts[0], 10);
+      dayIndex = parseInt(parts[1], 10);
+      workoutIndex = parseInt(parts[2], 10);
+    }
+  }
+
+  const week = programJson.find(w => w && Number(w.weekIndex) === Number(weekIndex));
+  if (!week || !Array.isArray(week.days)) return null;
+  const day = week.days.find(d => d && Number(d.dayIndex) === Number(dayIndex));
+  if (!day || !Array.isArray(day.workouts)) return null;
+  const w = day.workouts[Number(workoutIndex)];
+  if (!w) return null;
+
+  return {
+    week, day, workout: w,
+    weekIndex: Number(weekIndex),
+    dayIndex: Number(dayIndex),
+    workoutIndex: Number(workoutIndex),
+    workoutId: buildWorkoutKey(weekIndex, dayIndex, workoutIndex),
+  };
+}
+
 // * user service routes
 // create a new user
 
@@ -549,48 +584,141 @@ router.post("/:id/daily-workout/log", tokenauth, async (req, res) => {
 // Choose a training program and add it to the calendar
 router.post("/:id/program/choose", tokenauth, async (req, res) => {
   try {
+    const userId = req.params.id;
     const { programId, date } = req.body || {};
 
-    if (!programId || !date) {
-      return res
-        .status(400)
-        .json({ message: "Program ID and date are required" });
+    if (!programId) {
+      return res.status(400).json({ message: "Program ID is required" });
     }
 
-    const program = await TrainingPrograms.findByPk(programId);
-
-    if (!program) {
+    // Load the template program (catalog item)
+    const template = await TrainingPrograms.findByPk(programId);
+    if (!template) {
       return res.status(404).json({ message: "Training program not found" });
     }
 
-    // check if the user already has a training program
-    const existingProgram = await TrainingPrograms.findOne({
-      where: { userId: req.params.id },
-    });
-    if (existingProgram) {
-      return res
-        .status(400)
-        .json({ message: "User already has a training program" });
+    // Enforce one program per user
+    const existing = await TrainingPrograms.findOne({ where: { userId } });
+    if (existing) {
+      return res.status(400).json({ message: "User already has a training program" });
     }
 
-    const template = {
-      source: "program",
-      templateId: program.id,
-      name: program.name,
-      exercises: program.exercises,
-    };
+    // Create a user-owned program by copying fields from the template
+    const userProgram = await TrainingPrograms.create({
+      userId,
+      name: template.name,
+      description: template.description,
+      duration: template.duration,
+      workouts: template.workouts, // copy the nested weeks/days/workouts JSON
+    });
 
     let calendar = null;
-    if (date) {
-      calendar = await addWorkoutToCalendar(req.params.id, date, template);
-    }
+    const effectiveDate = date || new Date().toISOString().split("T")[0];
 
-    res
-      .status(200)
-      .json({ message: "Training program added to calendar", calendar });
+    // Optionally log the assignment on the calendar (as a start marker)
+    const calendarPayload = {
+      source: "program",
+      externalId: `program:${userProgram.id}:start:${effectiveDate}`,
+      programMeta: {
+        programId: userProgram.id,
+        name: userProgram.name,
+        event: "program_assigned"
+      },
+      name: `Started program: ${userProgram.name}`,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
+
+    return res.status(201).json({
+      message: "Program assigned to user",
+      program: userProgram,
+      calendar,
+    });
   } catch (error) {
     console.error("Error choosing training program:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// complete a specific workout in a training program using a synthetic id (w:x-y-z) — Option B
+// the index goes (weekIndex, dayIndex, workoutIndex) or a synthetic id (e.g., w:0-1-0)
+// use the new id generated from the GET /:id/training-program endpoint
+router.post("/:id/program/complete", tokenauth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { programId, workoutId, weekIndex, dayIndex, workoutIndex, date, notes } = req.body || {};
+
+    // Require programId and at least a synthetic workoutId
+    if (!programId || (!workoutId && (weekIndex == null || dayIndex == null || workoutIndex == null))) {
+      return res.status(400).json({
+        message: "Provide programId and workoutId (e.g., 'w:0-1-0') or indices (weekIndex, dayIndex, workoutIndex)"
+      });
+    }
+
+    const effectiveDate = date || new Date().toISOString().split("T")[0];
+
+    // Load program and ensure it belongs to the user
+    const program = await TrainingPrograms.findByPk(programId);
+    if (!program) return res.status(404).json({ message: "Training program not found" });
+    if (String(program.userId) !== String(userId)) {
+      return res.status(403).json({ message: "Program does not belong to user" });
+    }
+
+    const programJson = JSON.parse(JSON.stringify(program.workouts || []));
+    const found = findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex, workoutId });
+    if (!found) return res.status(404).json({ message: "Workout not found in program" });
+
+    // Mark complete (non-destructive)
+    const idx = found.workoutIndex;
+    const dayRef = found.day;
+    const original = dayRef.workouts[idx] || {};
+    dayRef.workouts[idx] = {
+      ...original,
+      completed: true,
+      lastCompletedAt: new Date().toISOString(),
+      lastCompletedDate: effectiveDate,
+      completionNotes: notes || original.completionNotes,
+    };
+
+    await program.update({ workouts: programJson });
+
+    // Stable external id from synthetic key for calendar dedupe
+    const stableId = found.workoutId; // e.g., w:0-1-0
+    const calendarPayload = {
+      source: "program",
+      externalId: `program:${program.id}:workout:${stableId}:date:${effectiveDate}`,
+      programMeta: {
+        programId: program.id,
+        workoutId: stableId,
+        weekIndex: found.weekIndex,
+        dayIndex: found.dayIndex,
+        workoutIndex: found.workoutIndex,
+      },
+      name: original.name || `Program Workout ${stableId}`,
+      completed: true,
+      completedAt: new Date().toISOString(),
+      notes: notes || undefined,
+    };
+
+    const calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
+
+    return res.status(200).json({
+      message: "Workout marked complete",
+      date: effectiveDate,
+      programId: program.id,
+      workoutId: stableId,
+      indices: {
+        weekIndex: found.weekIndex,
+        dayIndex: found.dayIndex,
+        workoutIndex: found.workoutIndex,
+      },
+      calendar,
+    });
+  } catch (error) {
+    console.error("Error completing training program workout:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 

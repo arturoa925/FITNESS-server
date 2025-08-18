@@ -27,27 +27,186 @@
             { "name": "RDL", "sets": 3, "reps": 10, "restSec": 120 },
             { "name": "Leg Press", "sets": 3, "reps": 12, "restSec": 90 }
           ]}
-        ]}
-      ]},
-      { "weekIndex": 1, "days": [
-        { "dayIndex": 0, "title": "Push B", "workouts": [
+        ]},
+        { "dayIndex": 3, "title": "Push B", "workouts": [
           { "workoutIndex": 0, "name": "Upper Push B", "exercises": [
             { "name": "Incline Bench Press", "sets": 4, "reps": 8, "restSec": 120 },
             { "name": "DB Shoulder Press", "sets": 3, "reps": 10, "restSec": 90 },
             { "name": "Cable Fly", "sets": 3, "reps": 15, "restSec": 60 }
           ]}
         ]},
-        { "dayIndex": 1, "title": "Pull B", "workouts": [
+        { "dayIndex": 4, "title": "Pull B", "workouts": [
           { "workoutIndex": 0, "name": "Upper Pull B", "exercises": [
             { "name": "Pull-ups", "sets": 4, "reps": "AMRAP", "restSec": 120 },
-            { "name": "Seated Row", "sets": 3, "reps": 12, "restSec": 90 }
+            { "name": "Seated Row", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "Rear Delt Fly", "sets": 3, "reps": 15, "restSec": 60 }
           ]}
         ]},
-        { "dayIndex": 2, "title": "Legs B", "workouts": [
+        { "dayIndex": 5, "title": "Legs B", "workouts": [
           { "workoutIndex": 0, "name": "Leg Day B", "exercises": [
             { "name": "Front Squat", "sets": 4, "reps": 6, "restSec": 150 },
             { "name": "Leg Curl", "sets": 3, "reps": 12, "restSec": 90 },
             { "name": "Walking Lunges", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery / Mobility", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Thoracic Rotations", "sets": 3, "reps": 12, "restSec": 30 },
+            { "name": "Plank", "sets": 3, "durationSec": 45, "restSec": 45 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "Push A (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push A (wk2)", "exercises": [
+            { "name": "Bench Press", "sets": 5, "reps": 8, "restSec": 120 },
+            { "name": "Incline DB Press", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Lateral Raise", "sets": 4, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Pull A (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull A (wk2)", "exercises": [
+            { "name": "Barbell Row", "sets": 5, "reps": 8, "restSec": 120 },
+            { "name": "Lat Pulldown", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Face Pulls", "sets": 4, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Legs A (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day A (wk2)", "exercises": [
+            { "name": "Back Squat", "sets": 5, "reps": 6, "restSec": 150 },
+            { "name": "RDL", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "Leg Press", "sets": 3, "reps": 10, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Push B (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push B (wk2)", "exercises": [
+            { "name": "Incline Bench Press", "sets": 5, "reps": 6, "restSec": 150 },
+            { "name": "DB Shoulder Press", "sets": 4, "reps": 8, "restSec": 90 },
+            { "name": "Cable Fly", "sets": 3, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Pull B (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull B (wk2)", "exercises": [
+            { "name": "Pull-ups", "sets": 5, "reps": "AMRAP", "restSec": 120 },
+            { "name": "Seated Row", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Rear Delt Fly", "sets": 3, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Legs B (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day B (wk2)", "exercises": [
+            { "name": "Front Squat", "sets": 5, "reps": 5, "restSec": 150 },
+            { "name": "Leg Curl", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Walking Lunges", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery / Mobility (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core (wk2)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "90/90 Transitions", "sets": 3, "reps": 12, "restSec": 30 },
+            { "name": "Side Plank", "sets": 3, "durationSec": 30, "restSec": 45 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 2, "days": [
+        { "dayIndex": 0, "title": "Push A (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push A (wk3)", "exercises": [
+            { "name": "Bench Press (pause)", "sets": 4, "reps": 6, "restSec": 150 },
+            { "name": "Incline DB Press", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Lateral Raise", "sets": 4, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Pull A (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull A (wk3)", "exercises": [
+            { "name": "Barbell Row", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "Lat Pulldown (close)", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Face Pulls", "sets": 4, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Legs A (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day A (wk3)", "exercises": [
+            { "name": "Back Squat (tempo)", "sets": 4, "reps": 5, "restSec": 150 },
+            { "name": "RDL", "sets": 3, "reps": 8, "restSec": 120 },
+            { "name": "Leg Press", "sets": 3, "reps": 10, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Push B (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push B (wk3)", "exercises": [
+            { "name": "Incline Bench Press", "sets": 4, "reps": 6, "restSec": 150 },
+            { "name": "DB Shoulder Press", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Cable Fly", "sets": 3, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Pull B (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull B (wk3)", "exercises": [
+            { "name": "Pull-ups (weighted)", "sets": 4, "reps": 5, "restSec": 150 },
+            { "name": "Seated Row", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Rear Delt Fly", "sets": 3, "reps": 15, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Legs B (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day B (wk3)", "exercises": [
+            { "name": "Front Squat", "sets": 4, "reps": 4, "restSec": 180 },
+            { "name": "Leg Curl", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Walking Lunges", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery / Mobility (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core (wk3)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Bretzel Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Dead Bug", "sets": 3, "reps": 12, "restSec": 45 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 3, "days": [
+        { "dayIndex": 0, "title": "Push A (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push A (wk4)", "exercises": [
+            { "name": "Bench Press (top set)", "sets": 3, "reps": 5, "restSec": 180 },
+            { "name": "Incline DB Press", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Lateral Raise", "sets": 4, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Pull A (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull A (wk4)", "exercises": [
+            { "name": "Barbell Row (top set)", "sets": 3, "reps": 5, "restSec": 180 },
+            { "name": "Lat Pulldown", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Face Pulls", "sets": 4, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Legs A (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day A (wk4)", "exercises": [
+            { "name": "Back Squat (top set)", "sets": 3, "reps": 3, "restSec": 180 },
+            { "name": "RDL", "sets": 3, "reps": 6, "restSec": 150 },
+            { "name": "Leg Press", "sets": 3, "reps": 10, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Push B (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Push B (wk4)", "exercises": [
+            { "name": "Incline Bench Press (top set)", "sets": 3, "reps": 3, "restSec": 180 },
+            { "name": "DB Shoulder Press", "sets": 3, "reps": 6, "restSec": 90 },
+            { "name": "Cable Fly", "sets": 3, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Pull B (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Upper Pull B (wk4)", "exercises": [
+            { "name": "Pull-ups (AMRAP)", "sets": 3, "reps": "AMRAP", "restSec": 150 },
+            { "name": "Seated Row", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Rear Delt Fly", "sets": 3, "reps": 12, "restSec": 60 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Legs B (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Leg Day B (wk4)", "exercises": [
+            { "name": "Front Squat (top set)", "sets": 3, "reps": 3, "restSec": 180 },
+            { "name": "Leg Curl", "sets": 3, "reps": 8, "restSec": 90 },
+            { "name": "Walking Lunges", "sets": 3, "reps": 10, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery / Mobility (wk4)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core (wk4)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Couch Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Plank", "sets": 3, "durationSec": 60, "restSec": 45 }
           ]}
         ]}
       ]}
@@ -68,11 +227,46 @@
             { "name": "Plank", "sets": 3, "durationSec": 45, "restSec": 45 }
           ]}
         ]},
+        { "dayIndex": 1, "title": "Conditioning + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Bike Intervals + Core", "exercises": [
+            { "name": "Bike Intervals", "sets": 8, "durationSec": 30, "restSec": 60 },
+            { "name": "Dead Bug", "sets": 3, "reps": 12, "restSec": 45 },
+            { "name": "Side Plank", "sets": 3, "durationSec": 30, "restSec": 45 }
+          ]}
+        ]},
         { "dayIndex": 2, "title": "Full Body B", "workouts": [
           { "workoutIndex": 0, "name": "Full Body B", "exercises": [
             { "name": "Hip Hinge (RDL)", "sets": 3, "reps": 10, "restSec": 120 },
             { "name": "Overhead Press", "sets": 3, "reps": 10, "restSec": 90 },
             { "name": "Lat Pulldown", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Mobility + Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + 30-min Walk", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Thoracic Rotations", "sets": 3, "reps": 12, "restSec": 30 },
+            { "name": "Walk", "sets": 1, "durationSec": 1800, "restSec": 0 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Full Body A (repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body A (repeat)", "exercises": [
+            { "name": "Goblet Squat", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "DB Bench Press", "sets": 3, "reps": 12, "restSec": 90 },
+            { "name": "One-arm Row", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Full Body B (repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body B (repeat)", "exercises": [
+            { "name": "RDL", "sets": 3, "reps": 10, "restSec": 120 },
+            { "name": "Overhead Press", "sets": 3, "reps": 10, "restSec": 90 },
+            { "name": "Lat Pulldown", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery", "workouts": [
+          { "workoutIndex": 0, "name": "Stretch + Breath", "exercises": [
+            { "name": "Hamstring Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Calf Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Box Breathing", "sets": 3, "durationSec": 60, "restSec": 30 }
           ]}
         ]}
       ]},
@@ -84,11 +278,46 @@
             { "name": "Cable Row", "sets": 3, "reps": 12, "restSec": 90 }
           ]}
         ]},
+        { "dayIndex": 1, "title": "Conditioning + Core (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Bike Intervals + Core (wk2)", "exercises": [
+            { "name": "Bike Intervals", "sets": 10, "durationSec": 30, "restSec": 60 },
+            { "name": "Dead Bug", "sets": 3, "reps": 12, "restSec": 45 },
+            { "name": "Side Plank", "sets": 3, "durationSec": 30, "restSec": 45 }
+          ]}
+        ]},
         { "dayIndex": 2, "title": "Full Body B+", "workouts": [
           { "workoutIndex": 0, "name": "Full Body B+", "exercises": [
             { "name": "RDL", "sets": 4, "reps": 8, "restSec": 120 },
             { "name": "Overhead Press", "sets": 4, "reps": 8, "restSec": 90 },
             { "name": "Pull-ups (banded)", "sets": 3, "reps": 8, "restSec": 120 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Mobility + Walk (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + 30-min Walk (wk2)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Thoracic Rotations", "sets": 3, "reps": 12, "restSec": 30 },
+            { "name": "Walk", "sets": 1, "durationSec": 1800, "restSec": 0 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Full Body A (wk2 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body A (wk2 repeat)", "exercises": [
+            { "name": "Goblet Squat", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "DB Bench Press", "sets": 4, "reps": 10, "restSec": 90 },
+            { "name": "Cable Row", "sets": 3, "reps": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Full Body B (wk2 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Full Body B (wk2 repeat)", "exercises": [
+            { "name": "RDL", "sets": 4, "reps": 8, "restSec": 120 },
+            { "name": "Overhead Press", "sets": 4, "reps": 8, "restSec": 90 },
+            { "name": "Pull-ups (banded)", "sets": 3, "reps": 8, "restSec": 120 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Stretch + Breath (wk2)", "exercises": [
+            { "name": "Hamstring Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Calf Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Box Breathing", "sets": 3, "durationSec": 60, "restSec": 30 }
           ]}
         ]}
       ]}
@@ -108,10 +337,42 @@
             { "name": "Goblet Squat", "sets": 4, "reps": 12, "weightKg": 16, "restSec": 90 }
           ]}
         ]},
+        { "dayIndex": 1, "title": "KB Conditioning", "workouts": [
+          { "workoutIndex": 0, "name": "EMOM 12", "exercises": [
+            { "name": "Min 1: KB Swings", "sets": 12, "reps": 10, "weightKg": 16, "restSec": 0 },
+            { "name": "Min 2: KB Push Press", "sets": 12, "reps": 8, "weightKg": 12, "restSec": 0 }
+          ]}
+        ]},
         { "dayIndex": 2, "title": "KB Flow B", "workouts": [
           { "workoutIndex": 0, "name": "Complex", "exercises": [
             { "name": "KB Deadlift", "sets": 4, "reps": 12, "weightKg": 24, "restSec": 90 },
             { "name": "KB Row", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Mobility + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Cossack Squat", "sets": 3, "reps": 10, "restSec": 60 },
+            { "name": "Plank", "sets": 3, "durationSec": 45, "restSec": 45 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "KB Flow A (repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press (repeat)", "exercises": [
+            { "name": "KB Swings", "sets": 5, "reps": 15, "weightKg": 16, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 4, "reps": 8, "weightKg": 12, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "KB Flow B (repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Complex (repeat)", "exercises": [
+            { "name": "KB Deadlift", "sets": 4, "reps": 12, "weightKg": 24, "restSec": 90 },
+            { "name": "KB Row", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery", "workouts": [
+          { "workoutIndex": 0, "name": "Stretch + Breath", "exercises": [
+            { "name": "Hamstring Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Adductor Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Box Breathing", "sets": 3, "durationSec": 60, "restSec": 30 }
           ]}
         ]}
       ]},
@@ -121,7 +382,361 @@
             { "name": "KB Swings", "sets": 6, "reps": 15, "weightKg": 20, "restSec": 60 },
             { "name": "KB Clean & Press", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
           ]}
+        ]},
+        { "dayIndex": 1, "title": "KB Conditioning (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "EMOM 15", "exercises": [
+            { "name": "Min 1: KB Swings", "sets": 15, "reps": 10, "weightKg": 20, "restSec": 0 },
+            { "name": "Min 2: KB Push Press", "sets": 15, "reps": 8, "weightKg": 16, "restSec": 0 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "KB Flow B+", "workouts": [
+          { "workoutIndex": 0, "name": "Complex+", "exercises": [
+            { "name": "KB Deadlift", "sets": 5, "reps": 10, "weightKg": 28, "restSec": 90 },
+            { "name": "KB Row", "sets": 5, "reps": 8, "weightKg": 20, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Mobility + Core (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core (wk2)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Cossack Squat", "sets": 3, "reps": 10, "restSec": 60 },
+            { "name": "Side Plank", "sets": 3, "durationSec": 30, "restSec": 45 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "KB Flow A (wk2 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press (wk2 repeat)", "exercises": [
+            { "name": "KB Swings", "sets": 6, "reps": 15, "weightKg": 20, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 4, "reps": 10, "weightKg": 16, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "KB Flow B (wk2 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Complex (wk2 repeat)", "exercises": [
+            { "name": "KB Deadlift", "sets": 5, "reps": 10, "weightKg": 28, "restSec": 90 },
+            { "name": "KB Row", "sets": 5, "reps": 8, "weightKg": 20, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery (wk2)", "workouts": [
+          { "workoutIndex": 0, "name": "Stretch + Breath (wk2)", "exercises": [
+            { "name": "Hamstring Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Adductor Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Box Breathing", "sets": 3, "durationSec": 60, "restSec": 30 }
+          ]}
         ]}
+      ]},
+      { "weekIndex": 2, "days": [
+        { "dayIndex": 0, "title": "KB Flow A (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press (wk3)", "exercises": [
+            { "name": "KB Swings", "sets": 6, "reps": 20, "weightKg": 20, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 5, "reps": 8, "weightKg": 20, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "KB Conditioning (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "EMOM 18", "exercises": [
+            { "name": "Min 1: KB Swings", "sets": 18, "reps": 10, "weightKg": 20, "restSec": 0 },
+            { "name": "Min 2: KB Push Press", "sets": 18, "reps": 8, "weightKg": 20, "restSec": 0 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "KB Flow B (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Complex (wk3)", "exercises": [
+            { "name": "KB Deadlift", "sets": 5, "reps": 12, "weightKg": 32, "restSec": 90 },
+            { "name": "KB Row", "sets": 5, "reps": 10, "weightKg": 24, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Mobility + Core (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility + Core (wk3)", "exercises": [
+            { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+            { "name": "Cossack Squat", "sets": 3, "reps": 12, "restSec": 60 },
+            { "name": "Hollow Hold", "sets": 3, "durationSec": 30, "restSec": 45 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "KB Flow A (wk3 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Swing + Clean + Press (wk3 repeat)", "exercises": [
+            { "name": "KB Swings", "sets": 6, "reps": 20, "weightKg": 20, "restSec": 60 },
+            { "name": "KB Clean & Press", "sets": 5, "reps": 8, "weightKg": 20, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "KB Flow B (wk3 repeat)", "workouts": [
+          { "workoutIndex": 0, "name": "Complex (wk3 repeat)", "exercises": [
+            { "name": "KB Deadlift", "sets": 5, "reps": 12, "weightKg": 32, "restSec": 90 },
+            { "name": "KB Row", "sets": 5, "reps": 10, "weightKg": 24, "restSec": 90 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Active Recovery (wk3)", "workouts": [
+          { "workoutIndex": 0, "name": "Stretch + Breath (wk3)", "exercises": [
+            { "name": "Hamstring Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Adductor Stretch", "sets": 3, "durationSec": 45, "restSec": 30 },
+            { "name": "Box Breathing", "sets": 3, "durationSec": 60, "restSec": 30 }
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  {
+    "id": "e2b5b6b1-9d3c-4d0a-8c1f-0c2e1f3a9d11",
+    "name": "Beginner Running — Run/Walk Start",
+    "description": "4-week beginner-friendly run/walk plan to build consistency safely.",
+    "duration": 4,
+    "workouts": [
+      { "weekIndex": 0, "days": [
+        { "dayIndex": 0, "title": "Run/Walk Intervals A", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 20min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (1m run / 1m walk)", "sets": 5, "durationSec": 120 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Mobility + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility 15min", "exercises": [
+            { "name": "Ankle Circles", "sets": 2, "reps": 15 },
+            { "name": "Hip Openers", "sets": 2, "durationSec": 60 },
+            { "name": "Plank", "sets": 2, "durationSec": 30 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Run/Walk Intervals B", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 22min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (1m run / 1m walk)", "sets": 6, "durationSec": 120 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Cross-Train (Optional)", "workouts": [
+          { "workoutIndex": 0, "name": "Bike or Row 20min", "exercises": [
+            { "name": "Steady Cardio", "durationSec": 1200 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Run/Walk Intervals C", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 24min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (2m run / 1m walk)", "sets": 6, "durationSec": 180 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Mobility + Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Walk 30min", "exercises": [
+            { "name": "Walk", "durationSec": 1800 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Long Easy Run/Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Easy 30–35min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Easy Run/Walk", "durationSec": 1500 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "Run Intervals A", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 26min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (2m run / 1m walk)", "sets": 6, "durationSec": 180 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Mobility + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility 15min", "exercises": [
+            { "name": "Calf Stretch", "sets": 2, "durationSec": 45 },
+            { "name": "Hip Flexor Stretch", "sets": 2, "durationSec": 45 },
+            { "name": "Dead Bug", "sets": 2, "reps": 12 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Run Steady 20–25min", "workouts": [
+          { "workoutIndex": 0, "name": "Steady 22–25min", "exercises": [
+            { "name": "Steady Run/Walk", "durationSec": 1500 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Cross-Train (Optional)", "workouts": [
+          { "workoutIndex": 0, "name": "Bike 20–25min", "exercises": [
+            { "name": "Steady Cardio", "durationSec": 1500 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Run Intervals B", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 28min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (3m run / 1m walk)", "sets": 5, "durationSec": 240 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Mobility + Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Walk 30–35min", "exercises": [
+            { "name": "Walk", "durationSec": 2100 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Long Easy 35–40min", "workouts": [
+          { "workoutIndex": 0, "name": "Easy 35–40min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Easy Run/Walk", "durationSec": 1800 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 2, "days": [
+        { "dayIndex": 0, "title": "Run Intervals A (3/1)", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 30min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (3m run / 1m walk)", "sets": 6, "durationSec": 240 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Mobility + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility 15–20min", "exercises": [
+            { "name": "Ankle Rocks", "sets": 2, "reps": 12 },
+            { "name": "Glute Bridge", "sets": 2, "reps": 12 },
+            { "name": "Side Plank", "sets": 2, "durationSec": 35 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Steady 25–30min", "workouts": [
+          { "workoutIndex": 0, "name": "Steady 28–30min", "exercises": [
+            { "name": "Steady Run", "durationSec": 1800 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Cross-Train (Optional)", "workouts": [
+          { "workoutIndex": 0, "name": "Bike 25–30min", "exercises": [
+            { "name": "Steady Cardio", "durationSec": 1800 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Run Intervals B (4/1)", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 32min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (4m run / 1m walk)", "sets": 5, "durationSec": 300 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Mobility + Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Walk 35–40min", "exercises": [
+            { "name": "Walk", "durationSec": 2400 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Long Easy 40–45min", "workouts": [
+          { "workoutIndex": 0, "name": "Easy 40–45min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Easy Run", "durationSec": 2100 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]}
+      ]},
+      { "weekIndex": 3, "days": [
+        { "dayIndex": 0, "title": "Run Intervals A (5/1)", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 34min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (5m run / 1m walk)", "sets": 4, "durationSec": 360 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 1, "title": "Mobility + Core", "workouts": [
+          { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [
+            { "name": "Calf Stretch", "sets": 2, "durationSec": 45 },
+            { "name": "Hamstring Stretch", "sets": 2, "durationSec": 45 },
+            { "name": "Dead Bug", "sets": 2, "reps": 12 }
+          ]}
+        ]},
+        { "dayIndex": 2, "title": "Steady 30–35min", "workouts": [
+          { "workoutIndex": 0, "name": "Steady 32–35min", "exercises": [
+            { "name": "Steady Run", "durationSec": 2100 }
+          ]}
+        ]},
+        { "dayIndex": 3, "title": "Cross-Train (Optional)", "workouts": [
+          { "workoutIndex": 0, "name": "Bike 25–30min", "exercises": [
+            { "name": "Steady Cardio", "durationSec": 1800 }
+          ]}
+        ]},
+        { "dayIndex": 4, "title": "Run Intervals B (6/1)", "workouts": [
+          { "workoutIndex": 0, "name": "R/W 36min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Intervals (6m run / 1m walk)", "sets": 4, "durationSec": 420 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]},
+        { "dayIndex": 5, "title": "Mobility + Walk", "workouts": [
+          { "workoutIndex": 0, "name": "Walk 40–45min", "exercises": [
+            { "name": "Walk", "durationSec": 2700 }
+          ]}
+        ]},
+        { "dayIndex": 6, "title": "Long Easy 45–50min", "workouts": [
+          { "workoutIndex": 0, "name": "Easy 45–50min", "exercises": [
+            { "name": "Warm-up Walk", "durationSec": 600 },
+            { "name": "Easy Run", "durationSec": 2400 },
+            { "name": "Cool-down Walk", "durationSec": 600 }
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  {
+    "id": "4c6f2e3b-8fbf-4a2f-9a64-7a2e1d0c3f55",
+    "name": "Half Marathon — 8-Week Prep",
+    "description": "8-week progressive plan with easy runs, speed work, long runs, and recovery.",
+    "duration": 8,
+    "workouts": [
+      { "weekIndex": 0, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 3km", "exercises": [ { "name": "Run", "distanceKm": 3 } ] } ] },
+        { "dayIndex": 1, "title": "Mobility + Core", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips/Ankles", "durationSec": 600 }, { "name": "Core", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 4km", "exercises": [ { "name": "Run", "distanceKm": 4 } ] } ] },
+        { "dayIndex": 3, "title": "Speed — Strides", "workouts": [ { "workoutIndex": 0, "name": "6×20s strides", "exercises": [ { "name": "Warm-up Jog", "durationSec": 600 }, { "name": "Strides", "sets": 6, "durationSec": 20, "restSec": 100 }, { "name": "Cool-down Jog", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 3–4km", "exercises": [ { "name": "Run", "distanceKm": 4 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 6–7km", "exercises": [ { "name": "Run", "distanceKm": 7 } ] } ] }
+      ]},
+      { "weekIndex": 1, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 4km", "exercises": [ { "name": "Run", "distanceKm": 4 } ] } ] },
+        { "dayIndex": 1, "title": "Strength (Optional)", "workouts": [ { "workoutIndex": 0, "name": "Legs/Core 25min", "exercises": [ { "name": "Squat Pattern", "sets": 3, "reps": 10 }, { "name": "Glute Bridge", "sets": 3, "reps": 12 } ] } ] },
+        { "dayIndex": 2, "title": "Tempo Intro", "workouts": [ { "workoutIndex": 0, "name": "2×6min tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "sets": 2, "durationSec": 360, "restSec": 180 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 3, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 4–5km", "exercises": [ { "name": "Run", "distanceKm": 5 } ] } ] },
+        { "dayIndex": 4, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips/Ankles", "durationSec": 600 }, { "name": "T-Spine", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 8–9km", "exercises": [ { "name": "Run", "distanceKm": 9 } ] } ] }
+      ]},
+      { "weekIndex": 2, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 5km", "exercises": [ { "name": "Run", "distanceKm": 5 } ] } ] },
+        { "dayIndex": 1, "title": "Speed — 400s", "workouts": [ { "workoutIndex": 0, "name": "6×400m", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "400m Repeat", "sets": 6, "distanceM": 400, "restSec": 120 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 4–5km", "exercises": [ { "name": "Run", "distanceKm": 5 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips", "durationSec": 600 }, { "name": "Calves", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Tempo", "workouts": [ { "workoutIndex": 0, "name": "3×8min tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "sets": 3, "durationSec": 480, "restSec": 180 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 10–11km", "exercises": [ { "name": "Run", "distanceKm": 11 } ] } ] }
+      ]},
+      { "weekIndex": 3, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 5–6km", "exercises": [ { "name": "Run", "distanceKm": 6 } ] } ] },
+        { "dayIndex": 1, "title": "Speed — Hills", "workouts": [ { "workoutIndex": 0, "name": "8×45s hill", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Hill Repeat", "sets": 8, "durationSec": 45, "restSec": 90 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 5km", "exercises": [ { "name": "Run", "distanceKm": 5 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips/Ankles", "durationSec": 600 }, { "name": "Glutes", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Tempo", "workouts": [ { "workoutIndex": 0, "name": "2×12min tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "sets": 2, "durationSec": 720, "restSec": 240 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 12–13km", "exercises": [ { "name": "Run", "distanceKm": 13 } ] } ] }
+      ]},
+      { "weekIndex": 4, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 6km", "exercises": [ { "name": "Run", "distanceKm": 6 } ] } ] },
+        { "dayIndex": 1, "title": "Speed — 800s", "workouts": [ { "workoutIndex": 0, "name": "5×800m", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "800m Repeat", "sets": 5, "distanceM": 800, "restSec": 150 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 5–6km", "exercises": [ { "name": "Run", "distanceKm": 6 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips", "durationSec": 600 }, { "name": "Calves", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Tempo", "workouts": [ { "workoutIndex": 0, "name": "3×10min tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "sets": 3, "durationSec": 600, "restSec": 180 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 14–15km", "exercises": [ { "name": "Run", "distanceKm": 15 } ] } ] }
+      ]},
+      { "weekIndex": 5, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 6–7km", "exercises": [ { "name": "Run", "distanceKm": 7 } ] } ] },
+        { "dayIndex": 1, "title": "Speed — 1k Repeats", "workouts": [ { "workoutIndex": 0, "name": "4×1km", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "1km Repeat", "sets": 4, "distanceM": 1000, "restSec": 180 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 6km", "exercises": [ { "name": "Run", "distanceKm": 6 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Glutes", "durationSec": 600 }, { "name": "T-Spine", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Tempo", "workouts": [ { "workoutIndex": 0, "name": "20min continuous tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "durationSec": 1200 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 16–18km", "exercises": [ { "name": "Run", "distanceKm": 18 } ] } ] }
+      ]},
+      { "weekIndex": 6, "days": [
+        { "dayIndex": 0, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 6–7km", "exercises": [ { "name": "Run", "distanceKm": 7 } ] } ] },
+        { "dayIndex": 1, "title": "Speed — Mixed", "workouts": [ { "workoutIndex": 0, "name": "4×600m + 4×200m", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "600m", "sets": 4, "distanceM": 600, "restSec": 120 }, { "name": "200m", "sets": 4, "distanceM": 200, "restSec": 60 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run", "workouts": [ { "workoutIndex": 0, "name": "Easy 6km", "exercises": [ { "name": "Run", "distanceKm": 6 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility", "workouts": [ { "workoutIndex": 0, "name": "Mobility 20min", "exercises": [ { "name": "Hips", "durationSec": 600 }, { "name": "Calves", "durationSec": 600 } ] } ] },
+        { "dayIndex": 4, "title": "Tempo", "workouts": [ { "workoutIndex": 0, "name": "25min continuous tempo", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Tempo", "durationSec": 1500 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 5, "title": "Active Recovery", "workouts": [ { "workoutIndex": 0, "name": "Walk/Stretch 30min", "exercises": [ { "name": "Walk", "durationSec": 1800 } ] } ] },
+        { "dayIndex": 6, "title": "Long Run", "workouts": [ { "workoutIndex": 0, "name": "Long 19–20km", "exercises": [ { "name": "Run", "distanceKm": 20 } ] } ] }
+      ]},
+      { "weekIndex": 7, "days": [
+        { "dayIndex": 0, "title": "Easy Run (Taper)", "workouts": [ { "workoutIndex": 0, "name": "Easy 5km", "exercises": [ { "name": "Run", "distanceKm": 5 } ] } ] },
+        { "dayIndex": 1, "title": "Strides (Taper)", "workouts": [ { "workoutIndex": 0, "name": "6×15s strides", "exercises": [ { "name": "Warm-up", "durationSec": 600 }, { "name": "Strides", "sets": 6, "durationSec": 15, "restSec": 90 }, { "name": "Cool-down", "durationSec": 600 } ] } ] },
+        { "dayIndex": 2, "title": "Easy Run (Taper)", "workouts": [ { "workoutIndex": 0, "name": "Easy 4km", "exercises": [ { "name": "Run", "distanceKm": 4 } ] } ] },
+        { "dayIndex": 3, "title": "Mobility (Taper)", "workouts": [ { "workoutIndex": 0, "name": "Mobility 15min", "exercises": [ { "name": "Hips/Ankles", "durationSec": 600 }, { "name": "Glutes", "durationSec": 300 } ] } ] },
+        { "dayIndex": 4, "title": "Shakeout", "workouts": [ { "workoutIndex": 0, "name": "Easy 3km", "exercises": [ { "name": "Run", "distanceKm": 3 } ] } ] },
+        { "dayIndex": 5, "title": "Rest", "workouts": [ { "workoutIndex": 0, "name": "Rest Day", "exercises": [ { "name": "Rest", "durationSec": 0 } ] } ] },
+        { "dayIndex": 6, "title": "Race Day — Half Marathon (21.1km)", "workouts": [ { "workoutIndex": 0, "name": "Race 21.1km", "exercises": [ { "name": "Run", "distanceKm": 21.1 } ] } ] }
       ]}
     ]
   }
