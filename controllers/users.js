@@ -11,7 +11,11 @@ const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
 require("dotenv").config();
+
 const { v4: uuidv4 } = require("uuid");
+const sharp = require("sharp");
+const upload = require("../utils/upload"); // multer (memoryStorage)
+const cloudinary = require("../utils/cloudinary");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -87,17 +91,13 @@ function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex
   };
 }
 
-// * user service routes
-// create a new user
-
-router.post("/register", async (req, res) => {
+// create a new user (optional avatar upload via multipart/form-data field "avatar")
+router.post("/register", upload.single("avatar"), async (req, res) => {
   try {
-    const { firstName, lastName, password, profilePicture } = req.body || {};
+    const { firstName, lastName, password, profilePicture, profilePictureUrl } = req.body || {};
     const email = normalizeEmail(req.body);
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
     const existingUser = await Users.findOne({ where: { email } });
@@ -105,18 +105,58 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    // Hash password before save
+    const hashed = await bcrypt.hash(password, 10);
+
+    // Handle optional avatar upload to Cloudinary
+    let avatarUrl = null;
+    let avatarPublicId = null;
+
+    if (req.file && req.file.buffer) {
+      try {
+        const processed = await sharp(req.file.buffer)
+          .rotate() // respect EXIF
+          .resize(512, 512, { fit: "cover" })
+          .webp({ quality: 85 })
+          .toBuffer();
+
+        const base64 = `data:image/webp;base64,${processed.toString("base64")}`;
+        const publicId = `avatars/${uuidv4()}`;
+        const result = await cloudinary.uploader.upload(base64, {
+          public_id: publicId,
+          folder: "avatars",
+          overwrite: true,
+          resource_type: "image",
+        });
+
+        avatarUrl = result.secure_url;
+        avatarPublicId = result.public_id;
+      } catch (e) {
+        console.error("Cloudinary upload error:", e);
+        return res.status(500).json({ message: "Failed to upload avatar" });
+      }
+    } else if (profilePictureUrl || profilePicture) {
+      // If client passed a direct URL, accept it
+      avatarUrl = profilePictureUrl || profilePicture;
+    }
+
     const newUser = await Users.create({
       id: uuidv4(),
       firstName,
       lastName,
       email,
-      password,
-      profilePicture,
+      password: hashed,
+      profilePicture: avatarUrl || undefined,
+      profilePicturePublicId: avatarPublicId || undefined,
+      profilePictureProvider: avatarPublicId ? "cloudinary" : undefined,
     });
 
     const token = jwt.sign({ id: newUser.id }, JWT_SECRET, { expiresIn: "1h" });
 
-    res.status(201).json({ token, user: newUser });
+    const safeUser = newUser.toJSON();
+    delete safeUser.password;
+
+    res.status(201).json({ token, user: safeUser });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });

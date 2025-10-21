@@ -5,21 +5,27 @@
       "lastName": "Ayala",
       "email": "arturo.ayala@example.com",
       "password": "TrainHard123!",
-      "profilePicture": "https://images.example.com/profiles/arturo.jpg"
+      "profilePicture": "https://images.example.com/profiles/arturo.jpg",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "2bb4d3e5-90c8-4d3b-a042-3e7c2d1eab22",
       "firstName": "Maya",
       "lastName": "Lopez",
       "email": "maya.lopez@example.com",
-      "password": "StrongPass987!"
+      "password": "StrongPass987!",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "3cc5e4f6-a1d9-4e4c-8b53-4f8d3e2fbc33",
       "firstName": "Ethan",
       "lastName": "Chen",
       "email": "ethan.chen@example.com",
-      "password": "Kettlebell2025$"
+      "password": "Kettlebell2025$",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "4dd6f507-b2ea-4f5d-9c64-509e4f30cd44",
@@ -27,35 +33,45 @@
       "lastName": "Garcia",
       "email": "sofia.garcia@example.com",
       "password": "PullPushRun#42",
-      "profilePicture": "https://images.example.com/profiles/sofia.png"
+      "profilePicture": "https://images.example.com/profiles/sofia.png",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "5ee70618-c3fb-4a6e-bd75-61af5041de55",
       "firstName": "Liam",
       "lastName": "Nguyen",
       "email": "liam.nguyen@example.com",
-      "password": "HealthyLife!88"
+      "password": "HealthyLife!88",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "6ff81729-d40c-4b7f-8e86-72b06152ef66",
       "firstName": "Ava",
       "lastName": "Patel",
       "email": "ava.patel@example.com",
-      "password": "WorkoutTime77@"
+      "password": "WorkoutTime77@",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "70a9283a-e51d-4c80-9f97-83c17263f077",
       "firstName": "Noah",
       "lastName": "Johnson",
       "email": "noah.johnson@example.com",
-      "password": "CardioCore_123"
+      "password": "CardioCore_123",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "81ba394b-f62e-4d91-af08-94d283740188",
       "firstName": "Zoe",
       "lastName": "Kim",
       "email": "zoe.kim@example.com",
-      "password": "LiftSmile!2025"
+      "password": "LiftSmile!2025",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "92cb4a5c-073f-4ea2-b019-a5e394851299",
@@ -63,13 +79,17 @@
       "lastName": "Silva",
       "email": "mateo.silva@example.com",
       "password": "BeachRun#9000",
-      "profilePicture": "https://images.example.com/profiles/mateo.jpg"
+      "profilePicture": "https://images.example.com/profiles/mateo.jpg",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     },
     {
       "id": "a3dc5b6d-1840-4fb3-8a2a-b6f4a57623aa",
       "firstName": "Olivia",
       "lastName": "Reed",
       "email": "olivia.reed@example.com",
-      "password": "SunsetSquats55$"
+      "password": "SunsetSquats55$",
+      "profilePicturePublicId": null,
+      "profilePictureProvider": "cloudinary"
     }
   ]

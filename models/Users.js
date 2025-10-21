@@ -44,6 +44,16 @@ Users.init(
             allowNull: true,
             defaultValue: "https://example.com/default-profile.png",
         },
+        profilePicturePublicId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            // Stores Cloudinary public_id for deletion/versioning
+        },
+        profilePictureProvider: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: "cloudinary",
+        },
         provider: {
             type: DataTypes.STRING,
             allowNull: true,
