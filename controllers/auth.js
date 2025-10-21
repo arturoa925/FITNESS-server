@@ -149,7 +149,13 @@ router.get("/google/callback", async (req, res) => {
 
     // If you’re in a mobile context, redirect to your app scheme:
     if (MOBILE_REDIRECT_SCHEME && state === "mobile") {
-      return res.redirect(`${MOBILE_REDIRECT_SCHEME}://oauth-complete#token=${encodeURIComponent(token)}`);
+      const fragment = q({
+        token,
+        email: user.email || "",
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        photo: user.profilePicture || "",
+      });
+      return res.redirect(`${MOBILE_REDIRECT_SCHEME}://oauth-complete#${fragment}`);
     }
 
     // Fallback: return JSON (useful for testing in Insomnia)
