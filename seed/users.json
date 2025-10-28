@@ -5,7 +5,7 @@
       "lastName": "Ayala",
       "email": "arturo.ayala@example.com",
       "password": "TrainHard123!",
-      "profilePicture": "https://images.example.com/profiles/arturo.jpg",
+      "profilePicture": "https://res.cloudinary.com/dpaiwgit7/image/upload/v1761243256/Attachment_vjomln.jpg",
       "profilePicturePublicId": null,
       "profilePictureProvider": "cloudinary"
     },

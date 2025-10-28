@@ -31,7 +31,12 @@ router.get("/google", (req, res) => {
     });
   }
 
-  const state = req.query.state || ""; // consider signing a CSRF token for production
+  const rawState = String(req.query.state || "");
+  const incomingRedirect = String(req.query.redirect_uri || "").trim();
+  // Encode redirect into state so we can recover it in the callback
+  const state = incomingRedirect
+    ? `${rawState}${rawState ? "|" : ""}redir=${encodeURIComponent(incomingRedirect)}`
+    : rawState;
 
   // Support a minimal param set for debugging 400s
   const minimal = String(req.query.mode || "").toLowerCase() === "minimal";
@@ -79,6 +84,20 @@ router.get("/google/callback", async (req, res) => {
 
     const { code, state } = req.query;
     if (!code) return res.status(400).json({ message: "Missing authorization code" });
+
+    // Recover redirect_uri passed in the initial /auth/google call, if any
+    let recoveredRedirect = null;
+    if (state && typeof state === "string" && state.includes("redir=")) {
+      try {
+        // state may look like: "mobile|redir=exp%3A%2F%2F192.168.1.68%3A8081"
+        const match = state.split("|").find((s) => s.startsWith("redir="));
+        if (match) {
+          recoveredRedirect = decodeURIComponent(match.slice("redir=".length));
+        }
+      } catch (_) {
+        recoveredRedirect = null;
+      }
+    }
 
     // 2a) Exchange code for tokens
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -147,8 +166,24 @@ router.get("/google/callback", async (req, res) => {
       return res.redirect(`${CLIENT_WEB_URL}/oauth-complete#token=${encodeURIComponent(token)}`);
     }
 
-    // If you’re in a mobile context, redirect to your app scheme:
-    if (MOBILE_REDIRECT_SCHEME && state === "mobile") {
+    // Prefer dynamic redirect captured from the initial call (Expo Go proxy or exp:// host)
+    if (recoveredRedirect) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[OAuth] Redirecting back to mobile:", recoveredRedirect);
+      }
+      const fragment = q({
+        token,
+        email: user.email || "",
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        photo: user.profilePicture || "",
+      });
+      return res.redirect(`${recoveredRedirect}#${fragment}`);
+    }
+    // Legacy fallback: custom scheme via env for dev/standalone builds
+    if (MOBILE_REDIRECT_SCHEME && (state === "mobile" || String(state || "").includes("mobile"))) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[OAuth] Redirecting back to mobile:", `${MOBILE_REDIRECT_SCHEME}://oauth-complete`);
+      }
       const fragment = q({
         token,
         email: user.email || "",
