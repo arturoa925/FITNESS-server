@@ -205,43 +205,6 @@ router.post("/logout", tokenauth, async (req, res) => {
   }
 });
 
-// Get user profile by ID
-router.get("/:id", async (req, res) => {
-  try {
-    const user = await Users.findByPk(req.params.id, {
-      attributes: { exclude: ["password"] },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Error fetching user profile:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// Update user profile
-router.put("/:id", tokenauth, async (req, res) => {
-  try {
-    const user = await Users.findByPk(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Update user details
-    const updatedUser = await user.update(req.body);
-
-    res.status(200).json(updatedUser);
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
 // get all users
 router.get("/", async (req, res) => {
   try {
@@ -257,6 +220,17 @@ router.get("/", async (req, res) => {
 });
 
 // * user training programs routes
+
+// get all training programs
+router.get("/training-programs", async (req, res) => {
+  try {
+    const programs = await TrainingPrograms.findAll();
+    res.status(200).json(programs);
+  } catch (error) {
+    console.error("Error fetching training programs:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 // check if user has a training program
 router.get("/:id/training-programs", tokenauth, async (req, res) => {
@@ -347,6 +321,43 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
   } catch (error) {
     console.error("Error upserting/switching training program:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get user profile by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await Users.findByPk(req.params.id, {
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Update user profile
+router.put("/:id", tokenauth, async (req, res) => {
+  try {
+    const user = await Users.findByPk(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user details
+    const updatedUser = await user.update(req.body);
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
