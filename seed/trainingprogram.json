@@ -2,6 +2,7 @@
   {
     "id": "2f3d9b22-9d85-4a58-9d3d-3a8e6a2f9c01",
     "name": "Hypertrophy Split",
+    "slug": "hypertrophy-split",
     "description": "4-week push/pull/legs rotation focusing on volume and mind-muscle connection.",
     "duration": 4,
     "workouts": [
@@ -215,6 +216,7 @@
   {
     "id": "7a1f5e44-3b2a-4d20-9c17-d6379b61d2e2",
     "name": "Beginner Full-Body",
+    "slug": "beginner-full-body",
     "description": "2-week full-body routine emphasizing form, consistency, and recovery.",
     "duration": 2,
     "workouts": [
@@ -326,6 +328,7 @@
   {
     "id": "b9c8f4aa-6e3d-4f8a-9e7b-122aa3d9c4f5",
     "name": "Kettlebell Burner",
+    "slug": "kettlebell-burner",
     "description": "3-week kettlebell flow for conditioning and strength endurance.",
     "duration": 3,
     "workouts": [
@@ -473,6 +476,7 @@
   {
     "id": "e2b5b6b1-9d3c-4d0a-8c1f-0c2e1f3a9d11",
     "name": "Beginner Running — Run/Walk Start",
+    "slug": "beginner-running-run-walk-start",
     "description": "4-week beginner-friendly run/walk plan to build consistency safely.",
     "duration": 4,
     "workouts": [
@@ -663,6 +667,7 @@
   {
     "id": "4c6f2e3b-8fbf-4a2f-9a64-7a2e1d0c3f55",
     "name": "Half Marathon — 8-Week Prep",
+    "slug": "half-marathon-8-week-prep",
     "description": "8-week progressive plan with easy runs, speed work, long runs, and recovery.",
     "duration": 8,
     "workouts": [
