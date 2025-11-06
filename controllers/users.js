@@ -61,6 +61,19 @@ function buildWorkoutKey(weekIndex, dayIndex, workoutIndex) {
   return `w:${Number(weekIndex)}-${Number(dayIndex)}-${Number(workoutIndex)}`;
 }
 
+// --- helpers for program switching / equality ---
+const ALLOWED_PROGRAM_PATCH = new Set(["name", "description", "duration", "workouts"]);
+const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const stableStringify = (val) =>
+  JSON.stringify(val, (k, v) => {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      return Object.keys(v)
+        .sort()
+        .reduce((acc, key) => ((acc[key] = v[key]), acc), {});
+    }
+    return v;
+  });
+
 // Given a program JSON and either explicit indices OR a synthetic id, find the workout and return refs
 function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex, workoutId }) {
   if (!Array.isArray(programJson)) return null;
@@ -250,40 +263,53 @@ router.get("/:id/training-programs", tokenauth, async (req, res) => {
   }
 });
 
-// Upsert & switch user training program
-// If body contains { programId }, we copy fields from that template program and assign to the user (switch)
-// Otherwise, we update with whatever fields are provided (name, description, duration, workouts, ...)
+// Upsert & switch user training program (transactional and hardened)
 router.put("/:id/program/update", tokenauth, async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const userId = req.params.id;
     const { programId, ...patch } = req.body || {};
 
-    // Find existing user program (one per user)
-    const existing = await TrainingPrograms.findOne({ where: { userId } });
+    if (!userId) {
+      await t.rollback();
+      return res.status(400).json({ message: "Missing user id" });
+    }
+    if (programId && !uuidRe.test(String(programId))) {
+      await t.rollback();
+      return res.status(400).json({ message: "Invalid programId format" });
+    }
 
-    // If client is switching via a catalog programId
+    // Load existing user-owned program row (1 per user), lock for update
+    let existing = await TrainingPrograms.findOne({
+      where: { userId },
+      transaction: t,
+      lock: true,
+    });
+
+    // SWITCH by template id
     if (programId) {
-      const template = await TrainingPrograms.findByPk(programId);
+      const template = await TrainingPrograms.findByPk(programId, { transaction: t });
       if (!template) {
+        await t.rollback();
         return res.status(404).json({ message: "Template program not found" });
       }
 
-      // If the user already has a program and it matches the template (by core fields), reject
+      // Prevent using user's own row as template
+      if (String(template.userId || "") === String(userId)) {
+        await t.rollback();
+        return res.status(400).json({ message: "Provided programId refers to the user's existing row, not a template" });
+      }
+
       if (existing) {
         const sameName = existing.name === template.name;
-        const sameDuration =
-          Number(existing.duration) === Number(template.duration);
-        const sameWorkouts =
-          JSON.stringify(existing.workouts || null) ===
-          JSON.stringify(template.workouts || null);
+        const sameDuration = Number(existing.duration) === Number(template.duration);
+        const sameWorkouts = stableStringify(existing.workouts || null) === stableStringify(template.workouts || null);
         if (sameName && sameDuration && sameWorkouts) {
-          return res
-            .status(409)
-            .json({ message: "Program is already assigned" });
+          await t.commit();
+          return res.status(200).json({ message: "Program already assigned", program: existing });
         }
       }
 
-      // Build payload from template
       const payload = {
         name: template.name,
         description: template.description,
@@ -291,34 +317,37 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
         workouts: template.workouts,
       };
 
+      let programRow;
       if (!existing) {
-        const created = await TrainingPrograms.create({ userId, ...payload });
-        return res
-          .status(201)
-          .json({ message: "Program assigned to user", program: created });
+        programRow = await TrainingPrograms.create({ userId, ...payload }, { transaction: t });
+        await t.commit();
+        return res.status(201).json({ message: "Program assigned to user", program: programRow });
+      } else {
+        programRow = await existing.update(payload, { transaction: t });
+        await t.commit();
+        return res.status(200).json({ message: "Program switched", program: programRow });
       }
-
-      const updated = await existing.update(payload);
-      return res
-        .status(200)
-        .json({ message: "Program switched", program: updated });
     }
 
-    // Otherwise: no programId provided → patch existing program fields (or create if none)
-    const payload = { ...patch };
+    // PATCH existing (or create) with allowed fields only
+    const sanitized = {};
+    for (const k of Object.keys(patch || {})) {
+      if (ALLOWED_PROGRAM_PATCH.has(k)) sanitized[k] = patch[k];
+    }
+    if (sanitized.duration != null) sanitized.duration = Number(sanitized.duration);
 
+    let programRow;
     if (!existing) {
-      const created = await TrainingPrograms.create({ userId, ...payload });
-      return res
-        .status(201)
-        .json({ message: "Program created for user", program: created });
+      programRow = await TrainingPrograms.create({ userId, ...sanitized }, { transaction: t });
+      await t.commit();
+      return res.status(201).json({ message: "Program created for user", program: programRow });
+    } else {
+      programRow = await existing.update(sanitized, { transaction: t });
+      await t.commit();
+      return res.status(200).json({ message: "Program updated", program: programRow });
     }
-
-    const updated = await existing.update(payload);
-    return res
-      .status(200)
-      .json({ message: "Program updated", program: updated });
   } catch (error) {
+    try { await sequelize.transaction().rollback(); } catch {}
     console.error("Error upserting/switching training program:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -642,48 +671,69 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
       return res.status(400).json({ message: "Program ID is required" });
     }
 
-    // Load the template program (catalog item)
     const template = await TrainingPrograms.findByPk(programId);
     if (!template) {
       return res.status(404).json({ message: "Training program not found" });
     }
 
-    // Enforce one program per user
-    const existing = await TrainingPrograms.findOne({ where: { userId } });
-    if (existing) {
-      return res.status(400).json({ message: "User already has a training program" });
+    // One program per user: create if none; otherwise switch (idempotent if same)
+    let existing = await TrainingPrograms.findOne({ where: { userId } });
+    // Prevent using the user's own row as a 'template'
+    if (existing && String(template.userId || "") === String(userId)) {
+      return res.status(400).json({ message: "Provided programId refers to the user's existing row, not a template" });
     }
 
-    // Create a user-owned program by copying fields from the template
-    const userProgram = await TrainingPrograms.create({
-      userId,
-      name: template.name,
-      description: template.description,
-      duration: template.duration,
-      workouts: template.workouts, // copy the nested weeks/days/workouts JSON
-    });
+    // Compute equality to avoid useless writes
+    const sameName = existing ? existing.name === template.name : false;
+    const sameDuration = existing ? Number(existing.duration) === Number(template.duration) : false;
+    const sameWorkouts = existing ? stableStringify(existing.workouts || null) === stableStringify(template.workouts || null) : false;
 
-    let calendar = null;
+    let userProgram;
+    let status = 201;
+    let message = "Program assigned to user";
+
+    if (!existing) {
+      userProgram = await TrainingPrograms.create({
+        userId,
+        name: template.name,
+        description: template.description,
+        duration: template.duration,
+        workouts: template.workouts,
+      });
+    } else if (sameName && sameDuration && sameWorkouts) {
+      userProgram = existing;
+      status = 200;
+      message = "Program already assigned";
+    } else {
+      userProgram = await existing.update(
+        {
+          name: template.name,
+          description: template.description,
+          duration: template.duration,
+          workouts: template.workouts,
+        },
+      );
+      status = 200;
+      message = "Program switched";
+    }
+
     const effectiveDate = date || new Date().toISOString().split("T")[0];
-
-    // Optionally log the assignment on the calendar (as a start marker)
     const calendarPayload = {
       source: "program",
       externalId: `program:${userProgram.id}:start:${effectiveDate}`,
       programMeta: {
         programId: userProgram.id,
         name: userProgram.name,
-        event: "program_assigned"
+        event: status === 201 ? "program_assigned" : message.replace(/\s+/g, "_").toLowerCase(),
       },
-      name: `Started program: ${userProgram.name}`,
+      name: `${status === 201 ? "Started" : "Switched to"} program: ${userProgram.name}`,
       completed: false,
       createdAt: new Date().toISOString(),
     };
+    const calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
 
-    calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
-
-    return res.status(201).json({
-      message: "Program assigned to user",
+    return res.status(status).json({
+      message,
       program: userProgram,
       calendar,
     });
