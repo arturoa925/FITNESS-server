@@ -10,7 +10,16 @@ const bcrypt = require("bcryptjs");
 const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
+
 require("dotenv").config();
+
+// Optional OpenAI client (used only if key present)
+let OpenAIClient = null;
+try {
+  OpenAIClient = require("openai");
+} catch (e) {
+  // openai not installed; route will 503 if AI is unavailable
+}
 
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
@@ -54,6 +63,104 @@ async function addWorkoutToCalendar(userId, date, workout) {
     await calendar.save();
   }
   return calendar;
+}
+
+/**
+ * Ask an LLM for a balanced daily workout (JSON only).
+ * Returns { id, exercises }. Throws with code "AI_*" on errors.
+ */
+async function generateDailyWorkoutWithAI(userId) {
+  if (!process.env.OPENAI_API_KEY || !OpenAIClient) {
+    const err = new Error("AI provider is not configured");
+    err.code = "AI_UNAVAILABLE";
+    throw err;
+  }
+  const openai = new OpenAIClient.OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const system = [
+    "You are a fitness planning assistant.",
+    "Return a single JSON object only. No prose.",
+    "Schema:",
+    "{",
+    '  "id": "uuid-v4 string",',
+    '  "exercises": [',
+    '    { "name": "string", "type": "strength|cardio|core|mobility|accessory|conditioning",',
+    '      "sets?": number, "reps?": number|string, "durationSec?": number, "durationMin?": number,',
+    '      "intervals?": number, "workSec?": number, "restSec?": number, "weightKg?": number,',
+    '      "distanceM?": number, "rounds?": number, "tempo?": string, "notes?": string }',
+    "  ]",
+    "}",
+    "Constraints:",
+    "- Exactly 5 items: 1 upper push, 1 upper pull, 1 lower, 1 core, 1 conditioning finisher.",
+    "- Realistic beginner-to-intermediate volumes and rests.",
+    "- Use only the fields above; omit anything else.",
+  ].join(" ");
+
+  const userPrompt = `Create today's balanced daily workout for user ${userId}. Respond with JSON only matching the schema.`;
+
+  // Timeout guard
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userPrompt },
+      ],
+      timeout: 15000,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const raw = completion?.choices?.[0]?.message?.content?.trim();
+  if (!raw) {
+    const err = new Error("Empty AI response");
+    err.code = "AI_EMPTY";
+    throw err;
+  }
+
+  let json;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    const err = new Error("Invalid JSON from AI");
+    err.code = "AI_BAD_JSON";
+    throw err;
+  }
+
+  if (!json || typeof json !== "object" || !Array.isArray(json.exercises)) {
+    const err = new Error("AI JSON missing exercises");
+    err.code = "AI_INVALID";
+    throw err;
+  }
+
+  // Normalize to 5 items and whitelist fields
+  const ALLOWED = new Set([
+    "name","type","sets","reps","durationSec","durationMin",
+    "intervals","workSec","restSec","weightKg","distanceM","rounds","tempo","notes"
+  ]);
+  const list = json.exercises.slice(0, 5).map((ex) => {
+    const out = {};
+    if (ex && typeof ex === "object") {
+      for (const k of Object.keys(ex)) if (ALLOWED.has(k)) out[k] = ex[k];
+      if (typeof out.name !== "string") out.name = String(ex.name || "Exercise");
+      if (typeof out.type !== "string") out.type = "strength";
+    } else {
+      out.name = "Exercise";
+      out.type = "strength";
+    }
+    return out;
+  });
+
+  const id = (typeof json.id === "string" && json.id) ? json.id : uuidv4();
+  return { id, exercises: list };
 }
 
 // Build a stable synthetic workout id from indices (e.g., w:0-2-0)
@@ -391,6 +498,48 @@ router.put("/:id", tokenauth, async (req, res) => {
 });
 
 // * user daily workout routes
+
+// Generate a standalone daily workout (AI-powered; no local fallback)
+// POST /ai/daily-workout
+// Body: { userId: string, save?: boolean, date?: 'YYYY-MM-DD' }
+router.post("/ai/daily-workout", tokenauth, async (req, res) => {
+  try {
+    const { userId, save = false } = req.body || {};
+    let { date } = req.body || {};
+
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+
+    const user = await Users.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Internet-only: call AI; no arrays, no fallback
+    const { id: workoutId, exercises } = await generateDailyWorkoutWithAI(userId);
+
+    let calendar = null;
+    if (save || req.body?.date) {
+      const today = new Date().toISOString().split("T")[0];
+      const effectiveDate = date || today;
+      const payload = {
+        source: "daily",
+        externalId: `daily:${workoutId}:date:${effectiveDate}`,
+        name: "Daily Workout",
+        exercises,
+        createdAt: new Date().toISOString(),
+      };
+      calendar = await addWorkoutToCalendar(userId, effectiveDate, payload);
+    }
+
+    return res.status(200).json({ id: workoutId, exercises, ...(calendar ? { calendar } : {}) });
+  } catch (error) {
+    if (error && (error.code === "AI_UNAVAILABLE" || error.code === "AI_EMPTY" || error.code === "AI_BAD_JSON" || error.code === "AI_INVALID")) {
+      return res.status(503).json({ message: "AI service unavailable", code: error.code });
+    }
+    console.error("Error generating daily workout:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// todo implement openai route for daily workout generation
 
 // check if user has a daily workout
 router.get("/:id/daily-workout", tokenauth, async (req, res) => {
