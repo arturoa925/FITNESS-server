@@ -75,7 +75,9 @@ async function generateDailyWorkoutWithAI(userId) {
     err.code = "AI_UNAVAILABLE";
     throw err;
   }
-  const openai = new OpenAIClient.OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAIClient.OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 
   const system = [
     "You are a fitness planning assistant.",
@@ -83,6 +85,7 @@ async function generateDailyWorkoutWithAI(userId) {
     "Schema:",
     "{",
     '  "id": "uuid-v4 string",',
+    '  "roundsOptions": [number, ...], // how many times to repeat the full 4-exercise circuit (e.g., [1,2,3,4] where 1 = easy and 4 = warrior)',
     '  "exercises": [',
     '    { "name": "string", "type": "strength|cardio|core|mobility|accessory|conditioning",',
     '      "sets?": number, "reps?": number|string, "durationSec?": number, "durationMin?": number,',
@@ -91,7 +94,12 @@ async function generateDailyWorkoutWithAI(userId) {
     "  ]",
     "}",
     "Constraints:",
-    "- Exactly 5 items: 1 upper push, 1 upper pull, 1 lower, 1 core, 1 conditioning finisher.",
+    "- Exactly 4 exercises total, used as a circuit:",
+    "  - 1 upper push (e.g., push-ups, dumbbell press)",
+    "  - 1 upper pull (e.g., rows, pull-ups)",
+    "  - 1 lower body (e.g., squats, lunges, hinges)",
+    "  - 1 core or conditioning finisher (e.g., carries, planks, med ball, cardio intervals)",
+    "- The user repeats the entire 4-exercise circuit for multiple rounds; 1 round is easy, 4 rounds is a very hard / 'warrior' level.",
     "- Realistic beginner-to-intermediate volumes and rests.",
     "- Use only the fields above; omit anything else.",
   ].join(" ");
@@ -105,7 +113,7 @@ async function generateDailyWorkoutWithAI(userId) {
   let completion;
   try {
     completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
@@ -141,16 +149,29 @@ async function generateDailyWorkoutWithAI(userId) {
     throw err;
   }
 
-  // Normalize to 5 items and whitelist fields
+  // Normalize to 4 items and whitelist fields
   const ALLOWED = new Set([
-    "name","type","sets","reps","durationSec","durationMin",
-    "intervals","workSec","restSec","weightKg","distanceM","rounds","tempo","notes"
+    "name",
+    "type",
+    "sets",
+    "reps",
+    "durationSec",
+    "durationMin",
+    "intervals",
+    "workSec",
+    "restSec",
+    "weightKg",
+    "distanceM",
+    "rounds",
+    "tempo",
+    "notes",
   ]);
-  const list = json.exercises.slice(0, 5).map((ex) => {
+  const list = json.exercises.slice(0, 4).map((ex) => {
     const out = {};
     if (ex && typeof ex === "object") {
       for (const k of Object.keys(ex)) if (ALLOWED.has(k)) out[k] = ex[k];
-      if (typeof out.name !== "string") out.name = String(ex.name || "Exercise");
+      if (typeof out.name !== "string")
+        out.name = String(ex.name || "Exercise");
       if (typeof out.type !== "string") out.type = "strength";
     } else {
       out.name = "Exercise";
@@ -159,8 +180,18 @@ async function generateDailyWorkoutWithAI(userId) {
     return out;
   });
 
-  const id = (typeof json.id === "string" && json.id) ? json.id : uuidv4();
-  return { id, exercises: list };
+  let roundsOptions = Array.isArray(json.roundsOptions)
+    ? json.roundsOptions
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0)
+        .slice(0, 4)
+    : null;
+  if (!roundsOptions || !roundsOptions.length) {
+    roundsOptions = [1, 2, 3, 4];
+  }
+
+  const id = typeof json.id === "string" && json.id ? json.id : uuidv4();
+  return { id, exercises: list, roundsOptions };
 }
 
 // Build a stable synthetic workout id from indices (e.g., w:0-2-0)
@@ -169,8 +200,14 @@ function buildWorkoutKey(weekIndex, dayIndex, workoutIndex) {
 }
 
 // --- helpers for program switching / equality ---
-const ALLOWED_PROGRAM_PATCH = new Set(["name", "description", "duration", "workouts"]);
-const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_PROGRAM_PATCH = new Set([
+  "name",
+  "description",
+  "duration",
+  "workouts",
+]);
+const uuidRe =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const stableStringify = (val) =>
   JSON.stringify(val, (k, v) => {
     if (v && typeof v === "object" && !Array.isArray(v)) {
@@ -182,12 +219,19 @@ const stableStringify = (val) =>
   });
 
 // Given a program JSON and either explicit indices OR a synthetic id, find the workout and return refs
-function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex, workoutId }) {
+function findWorkoutByPathOrKey(
+  programJson,
+  { weekIndex, dayIndex, workoutIndex, workoutId }
+) {
   if (!Array.isArray(programJson)) return null;
 
   // If a synthetic id is supplied, parse it
-  if (workoutId && typeof workoutId === 'string' && workoutId.startsWith('w:')) {
-    const parts = workoutId.slice(2).split('-');
+  if (
+    workoutId &&
+    typeof workoutId === "string" &&
+    workoutId.startsWith("w:")
+  ) {
+    const parts = workoutId.slice(2).split("-");
     if (parts.length === 3) {
       weekIndex = parseInt(parts[0], 10);
       dayIndex = parseInt(parts[1], 10);
@@ -195,15 +239,21 @@ function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex
     }
   }
 
-  const week = programJson.find(w => w && Number(w.weekIndex) === Number(weekIndex));
+  const week = programJson.find(
+    (w) => w && Number(w.weekIndex) === Number(weekIndex)
+  );
   if (!week || !Array.isArray(week.days)) return null;
-  const day = week.days.find(d => d && Number(d.dayIndex) === Number(dayIndex));
+  const day = week.days.find(
+    (d) => d && Number(d.dayIndex) === Number(dayIndex)
+  );
   if (!day || !Array.isArray(day.workouts)) return null;
   const w = day.workouts[Number(workoutIndex)];
   if (!w) return null;
 
   return {
-    week, day, workout: w,
+    week,
+    day,
+    workout: w,
     weekIndex: Number(weekIndex),
     dayIndex: Number(dayIndex),
     workoutIndex: Number(workoutIndex),
@@ -214,10 +264,13 @@ function findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex
 // create a new user (optional avatar upload via multipart/form-data field "avatar")
 router.post("/register", upload.single("avatar"), async (req, res) => {
   try {
-    const { firstName, lastName, password, profilePicture, profilePictureUrl } = req.body || {};
+    const { firstName, lastName, password, profilePicture, profilePictureUrl } =
+      req.body || {};
     const email = normalizeEmail(req.body);
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const existingUser = await Users.findOne({ where: { email } });
@@ -395,7 +448,9 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
 
     // SWITCH by template id
     if (programId) {
-      const template = await TrainingPrograms.findByPk(programId, { transaction: t });
+      const template = await TrainingPrograms.findByPk(programId, {
+        transaction: t,
+      });
       if (!template) {
         await t.rollback();
         return res.status(404).json({ message: "Template program not found" });
@@ -404,16 +459,26 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
       // Prevent using user's own row as template
       if (String(template.userId || "") === String(userId)) {
         await t.rollback();
-        return res.status(400).json({ message: "Provided programId refers to the user's existing row, not a template" });
+        return res
+          .status(400)
+          .json({
+            message:
+              "Provided programId refers to the user's existing row, not a template",
+          });
       }
 
       if (existing) {
         const sameName = existing.name === template.name;
-        const sameDuration = Number(existing.duration) === Number(template.duration);
-        const sameWorkouts = stableStringify(existing.workouts || null) === stableStringify(template.workouts || null);
+        const sameDuration =
+          Number(existing.duration) === Number(template.duration);
+        const sameWorkouts =
+          stableStringify(existing.workouts || null) ===
+          stableStringify(template.workouts || null);
         if (sameName && sameDuration && sameWorkouts) {
           await t.commit();
-          return res.status(200).json({ message: "Program already assigned", program: existing });
+          return res
+            .status(200)
+            .json({ message: "Program already assigned", program: existing });
         }
       }
 
@@ -426,13 +491,20 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
 
       let programRow;
       if (!existing) {
-        programRow = await TrainingPrograms.create({ userId, ...payload }, { transaction: t });
+        programRow = await TrainingPrograms.create(
+          { userId, ...payload },
+          { transaction: t }
+        );
         await t.commit();
-        return res.status(201).json({ message: "Program assigned to user", program: programRow });
+        return res
+          .status(201)
+          .json({ message: "Program assigned to user", program: programRow });
       } else {
         programRow = await existing.update(payload, { transaction: t });
         await t.commit();
-        return res.status(200).json({ message: "Program switched", program: programRow });
+        return res
+          .status(200)
+          .json({ message: "Program switched", program: programRow });
       }
     }
 
@@ -441,20 +513,30 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
     for (const k of Object.keys(patch || {})) {
       if (ALLOWED_PROGRAM_PATCH.has(k)) sanitized[k] = patch[k];
     }
-    if (sanitized.duration != null) sanitized.duration = Number(sanitized.duration);
+    if (sanitized.duration != null)
+      sanitized.duration = Number(sanitized.duration);
 
     let programRow;
     if (!existing) {
-      programRow = await TrainingPrograms.create({ userId, ...sanitized }, { transaction: t });
+      programRow = await TrainingPrograms.create(
+        { userId, ...sanitized },
+        { transaction: t }
+      );
       await t.commit();
-      return res.status(201).json({ message: "Program created for user", program: programRow });
+      return res
+        .status(201)
+        .json({ message: "Program created for user", program: programRow });
     } else {
       programRow = await existing.update(sanitized, { transaction: t });
       await t.commit();
-      return res.status(200).json({ message: "Program updated", program: programRow });
+      return res
+        .status(200)
+        .json({ message: "Program updated", program: programRow });
     }
   } catch (error) {
-    try { await sequelize.transaction().rollback(); } catch {}
+    try {
+      await sequelize.transaction().rollback();
+    } catch {}
     console.error("Error upserting/switching training program:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -513,7 +595,11 @@ router.post("/ai/daily-workout", tokenauth, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Internet-only: call AI; no arrays, no fallback
-    const { id: workoutId, exercises } = await generateDailyWorkoutWithAI(userId);
+    const {
+      id: workoutId,
+      exercises,
+      roundsOptions,
+    } = await generateDailyWorkoutWithAI(userId);
 
     let calendar = null;
     if (save || req.body?.date) {
@@ -524,22 +610,34 @@ router.post("/ai/daily-workout", tokenauth, async (req, res) => {
         externalId: `daily:${workoutId}:date:${effectiveDate}`,
         name: "Daily Workout",
         exercises,
+        roundsOptions,
         createdAt: new Date().toISOString(),
       };
       calendar = await addWorkoutToCalendar(userId, effectiveDate, payload);
     }
 
-    return res.status(200).json({ id: workoutId, exercises, ...(calendar ? { calendar } : {}) });
+    return res.status(200).json({
+      id: workoutId,
+      exercises,
+      roundsOptions,
+      ...(calendar ? { calendar } : {}),
+    });
   } catch (error) {
-    if (error && (error.code === "AI_UNAVAILABLE" || error.code === "AI_EMPTY" || error.code === "AI_BAD_JSON" || error.code === "AI_INVALID")) {
-      return res.status(503).json({ message: "AI service unavailable", code: error.code });
+    if (
+      error &&
+      (error.code === "AI_UNAVAILABLE" ||
+        error.code === "AI_EMPTY" ||
+        error.code === "AI_BAD_JSON" ||
+        error.code === "AI_INVALID")
+    ) {
+      return res
+        .status(503)
+        .json({ message: "AI service unavailable", code: error.code });
     }
     console.error("Error generating daily workout:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
-
-// todo implement openai route for daily workout generation
 
 // check if user has a daily workout
 router.get("/:id/daily-workout", tokenauth, async (req, res) => {
@@ -829,13 +927,23 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
     let existing = await TrainingPrograms.findOne({ where: { userId } });
     // Prevent using the user's own row as a 'template'
     if (existing && String(template.userId || "") === String(userId)) {
-      return res.status(400).json({ message: "Provided programId refers to the user's existing row, not a template" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Provided programId refers to the user's existing row, not a template",
+        });
     }
 
     // Compute equality to avoid useless writes
     const sameName = existing ? existing.name === template.name : false;
-    const sameDuration = existing ? Number(existing.duration) === Number(template.duration) : false;
-    const sameWorkouts = existing ? stableStringify(existing.workouts || null) === stableStringify(template.workouts || null) : false;
+    const sameDuration = existing
+      ? Number(existing.duration) === Number(template.duration)
+      : false;
+    const sameWorkouts = existing
+      ? stableStringify(existing.workouts || null) ===
+        stableStringify(template.workouts || null)
+      : false;
 
     let userProgram;
     let status = 201;
@@ -854,14 +962,12 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
       status = 200;
       message = "Program already assigned";
     } else {
-      userProgram = await existing.update(
-        {
-          name: template.name,
-          description: template.description,
-          duration: template.duration,
-          workouts: template.workouts,
-        },
-      );
+      userProgram = await existing.update({
+        name: template.name,
+        description: template.description,
+        duration: template.duration,
+        workouts: template.workouts,
+      });
       status = 200;
       message = "Program switched";
     }
@@ -873,13 +979,22 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
       programMeta: {
         programId: userProgram.id,
         name: userProgram.name,
-        event: status === 201 ? "program_assigned" : message.replace(/\s+/g, "_").toLowerCase(),
+        event:
+          status === 201
+            ? "program_assigned"
+            : message.replace(/\s+/g, "_").toLowerCase(),
       },
-      name: `${status === 201 ? "Started" : "Switched to"} program: ${userProgram.name}`,
+      name: `${status === 201 ? "Started" : "Switched to"} program: ${
+        userProgram.name
+      }`,
       completed: false,
       createdAt: new Date().toISOString(),
     };
-    const calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
+    const calendar = await addWorkoutToCalendar(
+      userId,
+      effectiveDate,
+      calendarPayload
+    );
 
     return res.status(status).json({
       message,
@@ -898,12 +1013,25 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
 router.post("/:id/program/complete", tokenauth, async (req, res) => {
   try {
     const userId = req.params.id;
-    const { programId, workoutId, weekIndex, dayIndex, workoutIndex, date, notes } = req.body || {};
+    const {
+      programId,
+      workoutId,
+      weekIndex,
+      dayIndex,
+      workoutIndex,
+      date,
+      notes,
+    } = req.body || {};
 
     // Require programId and at least a synthetic workoutId
-    if (!programId || (!workoutId && (weekIndex == null || dayIndex == null || workoutIndex == null))) {
+    if (
+      !programId ||
+      (!workoutId &&
+        (weekIndex == null || dayIndex == null || workoutIndex == null))
+    ) {
       return res.status(400).json({
-        message: "Provide programId and workoutId (e.g., 'w:0-1-0') or indices (weekIndex, dayIndex, workoutIndex)"
+        message:
+          "Provide programId and workoutId (e.g., 'w:0-1-0') or indices (weekIndex, dayIndex, workoutIndex)",
       });
     }
 
@@ -911,14 +1039,23 @@ router.post("/:id/program/complete", tokenauth, async (req, res) => {
 
     // Load program and ensure it belongs to the user
     const program = await TrainingPrograms.findByPk(programId);
-    if (!program) return res.status(404).json({ message: "Training program not found" });
+    if (!program)
+      return res.status(404).json({ message: "Training program not found" });
     if (String(program.userId) !== String(userId)) {
-      return res.status(403).json({ message: "Program does not belong to user" });
+      return res
+        .status(403)
+        .json({ message: "Program does not belong to user" });
     }
 
     const programJson = JSON.parse(JSON.stringify(program.workouts || []));
-    const found = findWorkoutByPathOrKey(programJson, { weekIndex, dayIndex, workoutIndex, workoutId });
-    if (!found) return res.status(404).json({ message: "Workout not found in program" });
+    const found = findWorkoutByPathOrKey(programJson, {
+      weekIndex,
+      dayIndex,
+      workoutIndex,
+      workoutId,
+    });
+    if (!found)
+      return res.status(404).json({ message: "Workout not found in program" });
 
     // Mark complete (non-destructive)
     const idx = found.workoutIndex;
@@ -952,7 +1089,11 @@ router.post("/:id/program/complete", tokenauth, async (req, res) => {
       notes: notes || undefined,
     };
 
-    const calendar = await addWorkoutToCalendar(userId, effectiveDate, calendarPayload);
+    const calendar = await addWorkoutToCalendar(
+      userId,
+      effectiveDate,
+      calendarPayload
+    );
 
     return res.status(200).json({
       message: "Workout marked complete",
