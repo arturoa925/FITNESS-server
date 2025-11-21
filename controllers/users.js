@@ -264,13 +264,31 @@ function findWorkoutByPathOrKey(
 // create a new user (optional avatar upload via multipart/form-data field "avatar")
 router.post("/register", upload.single("avatar"), async (req, res) => {
   try {
-    const { firstName, lastName, password, profilePicture, profilePictureUrl } =
-      req.body || {};
+    const {
+      firstName,
+      lastName,
+      password,
+      profilePicture,
+      profilePictureUrl,
+    } = req.body || {};
     const email = normalizeEmail(req.body);
-    if (!email || !password) {
+
+    if (!email) {
       return res
         .status(400)
-        .json({ message: "Email and password are required" });
+        .json({ message: "Email is required" });
+    }
+
+    if (!password || typeof password !== "string") {
+      return res
+        .status(400)
+        .json({ message: "Password is required" });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long",
+      });
     }
 
     const existingUser = await Users.findOne({ where: { email } });
@@ -349,12 +367,16 @@ router.post("/login", async (req, res) => {
 
     const user = await Users.findOne({ where: { email } });
 
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
     const validPassword = await bcrypt.compare(
       req.body.password,
       user.password
     );
 
-    if (!user || !validPassword) {
+    if (!validPassword) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
@@ -459,12 +481,10 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
       // Prevent using user's own row as template
       if (String(template.userId || "") === String(userId)) {
         await t.rollback();
-        return res
-          .status(400)
-          .json({
-            message:
-              "Provided programId refers to the user's existing row, not a template",
-          });
+        return res.status(400).json({
+          message:
+            "Provided programId refers to the user's existing row, not a template",
+        });
       }
 
       if (existing) {
@@ -563,16 +583,61 @@ router.get("/:id", async (req, res) => {
 // Update user profile
 router.put("/:id", tokenauth, async (req, res) => {
   try {
-    const user = await Users.findByPk(req.params.id);
+    const userId = req.params.id;
 
+    // Only allow the authenticated user to update their own profile
+    if (String(req.user.id) !== String(userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const user = await Users.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Update user details
-    const updatedUser = await user.update(req.body);
+    // Whitelist updatable fields
+    const {
+      firstName,
+      lastName,
+      email: rawEmail,
+      password,
+      profilePicture,
+    } = req.body || {};
 
-    res.status(200).json(updatedUser);
+    const updates = {};
+
+    if (typeof firstName === "string") updates.firstName = firstName;
+    if (typeof lastName === "string") updates.lastName = lastName;
+
+    // Normalize email if provided
+    if (rawEmail) {
+      const normalized = normalizeEmail({ email: rawEmail });
+      if (!normalized) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      updates.email = normalized;
+    }
+
+    if (typeof profilePicture === "string") {
+      updates.profilePicture = profilePicture;
+    }
+
+    // If password is being updated, hash it
+    if (password) {
+      if (typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({
+          message: "Password must be at least 8 characters long",
+        });
+      }
+      updates.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await user.update(updates);
+
+    const safeUser = updatedUser.toJSON();
+    delete safeUser.password;
+
+    return res.status(200).json(safeUser);
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -772,7 +837,9 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
       const json = entry.toJSON();
 
       // Flags are based on all workouts for that day (completed or not)
-      const hasDaily = (json.workouts || []).some((w) => w && w.source === "daily");
+      const hasDaily = (json.workouts || []).some(
+        (w) => w && w.source === "daily"
+      );
       const hasProgram = (json.workouts || []).some(
         (w) => w && w.source === "program"
       );
@@ -826,7 +893,7 @@ router.get("/:id/calendar/foods", tokenauth, async (req, res) => {
     });
 
     if (!calendar) {
-      return res.status(404).json({ message: "Calendar not found" });
+      return res.status(200).json([]);
     }
 
     res.status(200).json(calendar.foods || []);
@@ -960,12 +1027,10 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
     let existing = await TrainingPrograms.findOne({ where: { userId } });
     // Prevent using the user's own row as a 'template'
     if (existing && String(template.userId || "") === String(userId)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Provided programId refers to the user's existing row, not a template",
-        });
+      return res.status(400).json({
+        message:
+          "Provided programId refers to the user's existing row, not a template",
+      });
     }
 
     // Compute equality to avoid useless writes
