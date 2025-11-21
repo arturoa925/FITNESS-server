@@ -692,12 +692,28 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
     const { from, to, month, year, date } = req.query;
     const where = { userId: req.params.id };
 
+    // Optional: only return workouts that are marked completed === true
+    const onlyCompleted =
+      String(req.query.onlyCompleted || "false").toLowerCase() === "true";
+
     // Default ranges
     const today = new Date();
     const yyyy = String(today.getFullYear());
-    const mmNow = String(today.getMonth() + 1).padStart(2, "0");
+    const currentMonthIndex = today.getMonth() + 1; // 1-12
+    const mmNow = String(currentMonthIndex).padStart(2, "0");
+
+    // Last day of current month: new Date(year, monthIndex, 0) → last day of previous month
+    const lastDayCurrentMonth = new Date(
+      Number(yyyy),
+      currentMonthIndex,
+      0
+    ).getDate();
+
     const defaultFrom = `${yyyy}-${mmNow}-01`;
-    const defaultTo = `${yyyy}-${mmNow}-31`;
+    const defaultTo = `${yyyy}-${mmNow}-${String(lastDayCurrentMonth).padStart(
+      2,
+      "0"
+    )}`;
 
     // Priority: explicit date > from/to > month/year > default current month
     if (date) {
@@ -705,8 +721,15 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
     } else if (from && to) {
       where.date = { [Op.between]: [from, to] };
     } else if (month && year) {
-      const mm = String(month).padStart(2, "0");
-      where.date = { [Op.between]: [`${year}-${mm}-01`, `${year}-${mm}-31`] };
+      const mmInt = Number(month); // 1-12
+      const mm = String(mmInt).padStart(2, "0");
+      const lastDay = new Date(Number(year), mmInt, 0).getDate();
+      where.date = {
+        [Op.between]: [
+          `${year}-${mm}-01`,
+          `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+        ],
+      };
     } else {
       // Default to current month
       where.date = { [Op.between]: [defaultFrom, defaultTo] };
@@ -747,12 +770,21 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
 
     const enriched = calendars.map((entry) => {
       const json = entry.toJSON();
-      const hasDaily = (json.workouts || []).some((w) => w.source === "daily");
+
+      // Flags are based on all workouts for that day (completed or not)
+      const hasDaily = (json.workouts || []).some((w) => w && w.source === "daily");
       const hasProgram = (json.workouts || []).some(
-        (w) => w.source === "program"
+        (w) => w && w.source === "program"
       );
 
-      const workouts = (json.workouts || []).map((w) => {
+      // Start from all workouts, then optionally filter to only completed ones
+      let workouts = json.workouts || [];
+      if (onlyCompleted) {
+        workouts = workouts.filter((w) => w && w.completed === true);
+      }
+
+      // Enrich workouts with program / daily metadata as requested
+      workouts = workouts.map((w) => {
         if (includeProgram && w.source === "program" && programMeta) {
           return { ...w, program: programMeta };
         }
@@ -860,6 +892,7 @@ router.delete("/:id/calendar/foods", tokenauth, async (req, res) => {
 
 // * create workout routes
 
+// ! route not in use
 // Log (or fetch) a daily workout by picking a random catalog item by id
 // If body contains { workoutId }, use that specific daily workout instead of random
 // If body contains { date }, it will be added to the user's calendar; otherwise it only returns the random workout
