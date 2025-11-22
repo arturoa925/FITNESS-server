@@ -581,7 +581,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update user profile
-router.put("/:id", tokenauth, async (req, res) => {
+router.put("/:id", tokenauth, upload.single("avatar"), async (req, res) => {
   try {
     const userId = req.params.id;
 
@@ -595,13 +595,14 @@ router.put("/:id", tokenauth, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Whitelist updatable fields
+    // Whitelist updatable fields (plus optional avatar URL)
     const {
       firstName,
       lastName,
       email: rawEmail,
       password,
       profilePicture,
+      profilePictureUrl,
     } = req.body || {};
 
     const updates = {};
@@ -618,8 +619,69 @@ router.put("/:id", tokenauth, async (req, res) => {
       updates.email = normalized;
     }
 
-    if (typeof profilePicture === "string") {
-      updates.profilePicture = profilePicture;
+    // Handle profile picture updates
+    // Start from existing avatar values so we can decide whether they changed
+    let avatarUrl = user.profilePicture;
+    let avatarPublicId = user.profilePicturePublicId;
+    let avatarProvider = user.profilePictureProvider;
+
+    if (req.file && req.file.buffer) {
+      // New avatar file uploaded via multipart/form-data field "avatar"
+      try {
+        const processed = await sharp(req.file.buffer)
+          .rotate() // respect EXIF
+          .resize(512, 512, { fit: "cover" })
+          .webp({ quality: 85 })
+          .toBuffer();
+
+        const base64 = `data:image/webp;base64,${processed.toString("base64")}`;
+        const publicId = `avatars/${uuidv4()}`;
+        const result = await cloudinary.uploader.upload(base64, {
+          public_id: publicId,
+          folder: "avatars",
+          overwrite: true,
+          resource_type: "image",
+        });
+
+        // Best-effort cleanup of previous Cloudinary avatar, if any
+        if (avatarPublicId && avatarProvider === "cloudinary") {
+          try {
+            await cloudinary.uploader.destroy(avatarPublicId);
+          } catch (e) {
+            console.error("Cloudinary destroy error on profile update:", e);
+          }
+        }
+
+        avatarUrl = result.secure_url;
+        avatarPublicId = result.public_id;
+        avatarProvider = "cloudinary";
+      } catch (e) {
+        console.error("Cloudinary upload error on profile update:", e);
+        return res.status(500).json({ message: "Failed to upload avatar" });
+      }
+    } else if (
+      typeof profilePictureUrl === "string" &&
+      profilePictureUrl.trim().length
+    ) {
+      // Direct URL provided by client
+      avatarUrl = profilePictureUrl.trim();
+      avatarPublicId = null;
+      avatarProvider = "external";
+    } else if (
+      typeof profilePicture === "string" &&
+      profilePicture.trim().length
+    ) {
+      // Backwards-compat: plain profilePicture string
+      avatarUrl = profilePicture.trim();
+      avatarPublicId = null;
+      avatarProvider = "external";
+    }
+
+    // Only write avatar fields if something actually changed
+    if (avatarUrl !== user.profilePicture) {
+      updates.profilePicture = avatarUrl;
+      updates.profilePicturePublicId = avatarPublicId || undefined;
+      updates.profilePictureProvider = avatarProvider || undefined;
     }
 
     // If password is being updated, hash it
