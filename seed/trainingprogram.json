@@ -744,5 +744,581 @@
         { "dayIndex": 6, "title": "Race Day — Half Marathon (21.1km)", "workouts": [ { "workoutIndex": 0, "name": "Race 21.1km", "exercises": [ { "name": "Run", "distanceKm": 21.1 } ] } ] }
       ]}
     ]
-  }
+  },
+  {
+  "id": "a3f2b7d4-91c2-4f0b-9b77-2a4d6c1e8f10",
+  "name": "Yoga Foundations — 3-Week Reset",
+  "slug": "yoga-foundations-3-week-reset",
+  "description": "3-week progressive yoga plan focused on breath, mobility, and nervous system down-regulation.",
+  "duration": 3,
+  "workouts": [
+    {
+      "weekIndex": 0,
+      "days": [
+        {
+          "dayIndex": 0,
+          "title": "Gentle Full-Body Flow",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Foundation Flow A",
+              "exercises": [
+                { "name": "Centering + Breath", "sets": 1, "durationSec": 300 },
+                { "name": "Cat–Cow", "sets": 2, "reps": 10, "restSec": 15 },
+                { "name": "Sun Salutation A (slow)", "sets": 3, "reps": 1, "restSec": 30 },
+                { "name": "Low Lunge + Hamstring Rock", "sets": 2, "durationSec": 180, "restSec": 30 },
+                { "name": "Supine Twist + Savasana", "sets": 1, "durationSec": 420 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 1,
+          "title": "Hips & Hamstrings",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Hip-Opening Flow",
+              "exercises": [
+                { "name": "Box Breathing (seated)", "sets": 1, "durationSec": 240 },
+                { "name": "Figure-4 Stretch (supine)", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Lizard Lunge", "sets": 2, "durationSec": 90, "restSec": 20 },
+                { "name": "Half Splits", "sets": 2, "durationSec": 90, "restSec": 20 },
+                { "name": "Supported Forward Fold", "sets": 1, "durationSec": 180 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 2,
+          "title": "Restorative / Off",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Soft Recovery",
+              "exercises": [
+                { "name": "Easy Walk or Off", "durationSec": 900 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 3,
+          "title": "Shoulders & Upper Back",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Desk-Reset Flow",
+              "exercises": [
+                { "name": "Seated Neck Circles", "sets": 2, "reps": 8, "restSec": 15 },
+                { "name": "Thread the Needle", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Puppy Pose", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Bridge Pose", "sets": 2, "reps": 10, "restSec": 30 },
+                { "name": "Supported Child's Pose", "sets": 1, "durationSec": 240 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 4,
+          "title": "Balance & Core",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Foundations: Balance",
+              "exercises": [
+                { "name": "Mountain Pose + Breath", "sets": 1, "durationSec": 180 },
+                { "name": "Chair Pose (Utkatasana)", "sets": 3, "durationSec": 20, "restSec": 20 },
+                { "name": "Tree Pose (each side)", "sets": 2, "durationSec": 30, "restSec": 20 },
+                { "name": "Plank Variations", "sets": 3, "durationSec": 30, "restSec": 30 },
+                { "name": "Supine Relaxation", "sets": 1, "durationSec": 300 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 5,
+          "title": "Short Evening Unwind",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "10–15min Wind-Down",
+              "exercises": [
+                { "name": "Supported Child's Pose", "sets": 1, "durationSec": 180 },
+                { "name": "Reclined Bound Angle", "sets": 1, "durationSec": 240 },
+                { "name": "Box Breathing (lying)", "sets": 1, "durationSec": 180 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 6,
+          "title": "Off / Walk",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Optional Walk",
+              "exercises": [
+                { "name": "Walk (easy)", "durationSec": 1800 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "days": [
+        {
+          "dayIndex": 0,
+          "title": "Flow: Sun Salutations",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Sun A + B",
+              "exercises": [
+                { "name": "Centering Breath", "sets": 1, "durationSec": 240 },
+                { "name": "Sun Salutation A", "sets": 4, "reps": 1, "restSec": 20 },
+                { "name": "Sun Salutation B", "sets": 3, "reps": 1, "restSec": 20 },
+                { "name": "Savasana", "sets": 1, "durationSec": 420 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 1,
+          "title": "Hip Focus (Deeper)",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Hip Flow B",
+              "exercises": [
+                { "name": "90/90 Hips", "sets": 2, "reps": 10, "restSec": 20 },
+                { "name": "Lizard Lunge (deeper)", "sets": 2, "durationSec": 90, "restSec": 20 },
+                { "name": "Pigeon Pose (each side)", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Hamstring Strap Stretch", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Restorative Forward Fold", "sets": 1, "durationSec": 240 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 2,
+          "title": "Restorative",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Yin-Lite Session",
+              "exercises": [
+                { "name": "Supported Heart Opener", "sets": 1, "durationSec": 240 },
+                { "name": "Reclined Twist", "sets": 2, "durationSec": 90, "restSec": 20 },
+                { "name": "Legs Up the Wall", "sets": 1, "durationSec": 300 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 3,
+          "title": "Upper Back & Shoulders",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Desk Undo Flow",
+              "exercises": [
+                { "name": "Cat–Cow", "sets": 2, "reps": 10, "restSec": 15 },
+                { "name": "Thread the Needle", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Eagle Arms (seated)", "sets": 2, "durationSec": 45, "restSec": 20 },
+                { "name": "Bridge Pose", "sets": 3, "reps": 10, "restSec": 30 },
+                { "name": "Savasana", "sets": 1, "durationSec": 360 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 4,
+          "title": "Balance & Standing Flow",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Standing Sequence",
+              "exercises": [
+                { "name": "Mountain + Breath", "sets": 1, "durationSec": 180 },
+                { "name": "Warrior I → Warrior II", "sets": 2, "durationSec": 90, "restSec": 20 },
+                { "name": "Triangle Pose", "sets": 2, "durationSec": 60, "restSec": 20 },
+                { "name": "Tree Pose (each side)", "sets": 2, "durationSec": 40, "restSec": 20 },
+                { "name": "Standing Forward Fold", "sets": 1, "durationSec": 120 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 5,
+          "title": "Short Evening Unwind",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Wind-Down B",
+              "exercises": [
+                { "name": "Child's Pose", "sets": 1, "durationSec": 180 },
+                { "name": "Reclined Bound Angle", "sets": 1, "durationSec": 240 },
+                { "name": "Box Breathing", "sets": 1, "durationSec": 180 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 6,
+          "title": "Off / Optional Walk",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Easy Walk",
+              "exercises": [
+                { "name": "Walk", "durationSec": 1800 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weekIndex": 2,
+      "days": [
+        {
+          "dayIndex": 0,
+          "title": "Continuous Flow (25–30min)",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Flow C",
+              "exercises": [
+                { "name": "Center + Breath", "sets": 1, "durationSec": 240 },
+                { "name": "Sun A + Standing Sequence", "sets": 1, "durationSec": 900 },
+                { "name": "Floor Hip Work", "sets": 1, "durationSec": 420 },
+                { "name": "Savasana", "sets": 1, "durationSec": 360 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 1,
+          "title": "Hips Deep Dive (Yin-style)",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Yin Hips",
+              "exercises": [
+                { "name": "Dragon Pose", "sets": 2, "durationSec": 120, "restSec": 30 },
+                { "name": "Pigeon (each side)", "sets": 2, "durationSec": 120, "restSec": 30 },
+                { "name": "Wide-Legged Forward Fold", "sets": 1, "durationSec": 180 },
+                { "name": "Supine Twist", "sets": 2, "durationSec": 90, "restSec": 20 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 2,
+          "title": "Restorative / Nervous System",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Nervous System Reset",
+              "exercises": [
+                { "name": "Box Breathing", "sets": 1, "durationSec": 300 },
+                { "name": "Legs Up the Wall", "sets": 1, "durationSec": 360 },
+                { "name": "Body Scan (lying)", "sets": 1, "durationSec": 480 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 3,
+          "title": "Strength-leaning Flow",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Yoga Strength",
+              "exercises": [
+                { "name": "Chair Pose Holds", "sets": 3, "durationSec": 30, "restSec": 20 },
+                { "name": "High Plank / Low Plank Flow", "sets": 3, "reps": 5, "restSec": 30 },
+                { "name": "Side Plank (each side)", "sets": 2, "durationSec": 30, "restSec": 20 },
+                { "name": "Bridge March", "sets": 2, "reps": 12, "restSec": 30 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 4,
+          "title": "Full-Body Flow (Favorite Poses)",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Choose-Your-Flow",
+              "exercises": [
+                { "name": "Self-Selected Standing Sequence", "sets": 1, "durationSec": 900 },
+                { "name": "Self-Selected Floor Poses", "sets": 1, "durationSec": 600 },
+                { "name": "Savasana", "sets": 1, "durationSec": 360 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 5,
+          "title": "Short Evening Unwind",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Wind-Down C",
+              "exercises": [
+                { "name": "Child's Pose", "sets": 1, "durationSec": 180 },
+                { "name": "Reclined Twist", "sets": 1, "durationSec": 180 },
+                { "name": "Box Breathing", "sets": 1, "durationSec": 180 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 6,
+          "title": "Off / Walk",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Easy Walk",
+              "exercises": [
+                { "name": "Walk", "durationSec": 1800 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    
+  ]
+},
+{
+  "id": "c5ab9d11-42df-4c1e-a3f4-7f12aa9e77c4",
+  "name": "Calisthenics Foundations — 4 Weeks",
+  "slug": "calisthenics-foundations-4-weeks",
+  "description": "A 4-week bodyweight-only progression focused on strength, control, and movement quality.",
+  "duration": 4,
+  "workouts": [
+    {
+      "weekIndex": 0,
+      "days": [
+        {
+          "dayIndex": 0,
+          "title": "Push — Foundations",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Push A",
+              "exercises": [
+                { "name": "Push-ups", "sets": 3, "reps": 10, "restSec": 60 },
+                { "name": "Incline Push-ups", "sets": 3, "reps": 12, "restSec": 60 },
+                { "name": "Triceps Dips (bench)", "sets": 3, "reps": 12, "restSec": 60 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 1,
+          "title": "Pull — Foundations",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Pull A",
+              "exercises": [
+                { "name": "Australian Rows", "sets": 3, "reps": 10, "restSec": 60 },
+                { "name": "Band Pulldown", "sets": 3, "reps": 12, "restSec": 60 },
+                { "name": "Reverse Snow Angels", "sets": 3, "reps": 15, "restSec": 45 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 2,
+          "title": "Legs + Core",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Legs A",
+              "exercises": [
+                { "name": "Air Squats", "sets": 3, "reps": 15, "restSec": 60 },
+                { "name": "Reverse Lunges", "sets": 3, "reps": 12, "restSec": 60 },
+                { "name": "Plank", "sets": 3, "durationSec": 45, "restSec": 45 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 3,
+          "title": "Mobility + Active Recovery",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Mobility",
+              "exercises": [
+                { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+                { "name": "Shoulder CARs", "sets": 2, "reps": 8, "restSec": 20 },
+                { "name": "Walk", "durationSec": 1800 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 4,
+          "title": "Full Body Flow",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Flow A",
+              "exercises": [
+                { "name": "Burpees (slow)", "sets": 3, "reps": 6, "restSec": 60 },
+                { "name": "Walkout to Push-up", "sets": 3, "reps": 8, "restSec": 60 },
+                { "name": "Glute Bridge", "sets": 3, "reps": 15, "restSec": 45 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 5,
+          "title": "Balance + Core",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Core A",
+              "exercises": [
+                { "name": "Dead Bug", "sets": 3, "reps": 12, "restSec": 45 },
+                { "name": "Side Plank", "sets": 2, "durationSec": 30, "restSec": 30 },
+                { "name": "Single-Leg Romanian Reach", "sets": 2, "reps": 8, "restSec": 20 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 6,
+          "title": "Off / Light Walk",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Off",
+              "exercises": [
+                { "name": "Walk", "durationSec": 1500 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "days": [
+        {
+          "dayIndex": 0,
+          "title": "Push — Progression",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Push B",
+              "exercises": [
+                { "name": "Push-ups", "sets": 4, "reps": 10, "restSec": 60 },
+                { "name": "Decline Push-ups", "sets": 3, "reps": 8, "restSec": 75 },
+                { "name": "Dips (bench)", "sets": 3, "reps": 12, "restSec": 60 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 1,
+          "title": "Pull — Progression",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Pull B",
+              "exercises": [
+                { "name": "Australian Rows", "sets": 4, "reps": 10, "restSec": 60 },
+                { "name": "Band Pulldown", "sets": 4, "reps": 12, "restSec": 60 },
+                { "name": "Reverse Snow Angels", "sets": 3, "reps": 15, "restSec": 45 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 2,
+          "title": "Legs + Core — Progression",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Legs B",
+              "exercises": [
+                { "name": "Air Squats (tempo)", "sets": 3, "reps": 12, "restSec": 60 },
+                { "name": "Reverse Lunges", "sets": 3, "reps": 15, "restSec": 60 },
+                { "name": "Plank", "sets": 3, "durationSec": 60, "restSec": 45 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 3,
+          "title": "Mobility + Active Recovery",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Mobility",
+              "exercises": [
+                { "name": "Hip Openers", "sets": 3, "durationSec": 60, "restSec": 30 },
+                { "name": "Shoulder CARs", "sets": 2, "reps": 10, "restSec": 20 },
+                { "name": "Walk", "durationSec": 1800 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 4,
+          "title": "Full Body Flow — Progression",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Flow B",
+              "exercises": [
+                { "name": "Burpees", "sets": 4, "reps": 8, "restSec": 75 },
+                { "name": "Walkout to Push-up", "sets": 4, "reps": 8, "restSec": 60 },
+                { "name": "Glute Bridge (single-leg)", "sets": 3, "reps": 10, "restSec": 60 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 5,
+          "title": "Core + Balance — Progression",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Core B",
+              "exercises": [
+                { "name": "Dead Bug", "sets": 3, "reps": 15, "restSec": 45 },
+                { "name": "Side Plank", "sets": 3, "durationSec": 35, "restSec": 30 },
+                { "name": "Single-Leg Romanian Reach", "sets": 3, "reps": 8, "restSec": 20 }
+              ]
+            }
+          ]
+        },
+        {
+          "dayIndex": 6,
+          "title": "Off / Light Walk",
+          "workouts": [
+            {
+              "workoutIndex": 0,
+              "name": "Off",
+              "exercises": [
+                { "name": "Walk", "durationSec": 1500 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
 ]
