@@ -7,14 +7,63 @@ const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URI,
+  
+  GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET,
+  GITHUB_REDIRECT_URI,
   CLIENT_WEB_URL,
   MOBILE_REDIRECT_SCHEME,
-  JWT_SECRET
+  JWT_SECRET,
 } = process.env;
 
 // Helper to build query
 const q = (obj) =>
   Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+
+// 0) Kick off GitHub OAuth
+router.get("/github", (req, res) => {
+  const clientId = (GITHUB_CLIENT_ID || "").trim();
+  const redirectUri = (GITHUB_REDIRECT_URI || "").trim();
+
+  if (!clientId || !redirectUri) {
+    return res.status(500).json({
+      message: "Missing GitHub OAuth env vars",
+      required: ["GITHUB_CLIENT_ID", "GITHUB_REDIRECT_URI"],
+      GITHUB_CLIENT_ID_present: !!clientId,
+      GITHUB_REDIRECT_URI_present: !!redirectUri,
+    });
+  }
+
+  const rawState = String(req.query.state || "");
+  const incomingRedirect = String(req.query.redirect_uri || "").trim();
+  // Encode redirect into state so we can recover it in the callback
+  const state = incomingRedirect
+    ? `${rawState}${rawState ? "|" : ""}redir=${encodeURIComponent(
+        incomingRedirect
+      )}`
+    : rawState;
+
+  const minimal = String(req.query.mode || "").toLowerCase() === "minimal";
+
+  const baseParams = {
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: minimal ? "read:user" : "read:user user:email",
+    state,
+    allow_signup: "true",
+  };
+
+  const url = `https://github.com/login/oauth/authorize?${q(baseParams)}`;
+
+  if (String(req.query.debug).toLowerCase() === "true") {
+    return res.status(200).json({ authorize_url: url, params: baseParams });
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[OAuth/GitHub] Redirecting to:", url);
+  }
+  return res.redirect(url);
+});
 
 // 1) Kick off Google OAuth
 router.get("/google", (req, res) => {
@@ -197,6 +246,204 @@ router.get("/google/callback", async (req, res) => {
     return res.status(200).json({ token, user });
   } catch (err) {
     console.error("Google OAuth error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+// 3) GitHub callback: exchange code -> access token -> profile, then issue YOUR JWT
+router.get("/github/callback", async (req, res) => {
+  try {
+    if (req.query.error) {
+      return res.status(400).json({
+        message: "GitHub returned an error",
+        error: req.query.error,
+        error_description: req.query.error_description,
+      });
+    }
+
+    const { code, state } = req.query;
+    if (!code) {
+      return res
+        .status(400)
+        .json({ message: "Missing authorization code" });
+    }
+
+    // Recover redirect_uri passed in the initial /auth/github call, if any
+    let recoveredRedirect = null;
+    if (state && typeof state === "string" && state.includes("redir=")) {
+      try {
+        const match = state.split("|").find((s) => s.startsWith("redir="));
+        if (match) {
+          recoveredRedirect = decodeURIComponent(
+            match.slice("redir=".length)
+          );
+        }
+      } catch (_) {
+        recoveredRedirect = null;
+      }
+    }
+
+    // 3a) Exchange code for tokens
+    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: q({
+        client_id: GITHUB_CLIENT_ID,
+        client_secret: GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: GITHUB_REDIRECT_URI,
+      }),
+    });
+
+    const tokens = await tokenRes.json();
+    if (!tokens.access_token) {
+      return res
+        .status(401)
+        .json({ message: "GitHub token exchange failed", detail: tokens });
+    }
+
+    const accessToken = tokens.access_token;
+
+    // 3b) Fetch GitHub user profile
+    const userRes = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "User-Agent": "fitness-app",
+        Accept: "application/vnd.github+json",
+      },
+    });
+    const ghUser = await userRes.json();
+
+    // 3c) Fetch primary email if available
+    let primaryEmail = ghUser.email || null;
+    try {
+      const emailRes = await fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "User-Agent": "fitness-app",
+          Accept: "application/vnd.github+json",
+        },
+      });
+      const emails = await emailRes.json();
+      if (Array.isArray(emails) && emails.length > 0) {
+        const primary =
+          emails.find((e) => e.primary) ||
+          emails.find((e) => e.verified) ||
+          emails[0];
+        if (primary && primary.email) {
+          primaryEmail = primary.email;
+        }
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[OAuth/GitHub] email fetch failed:", e);
+      }
+    }
+
+    const provider = "github";
+    const providerId = String(ghUser.id);
+    const email = primaryEmail || null;
+
+    // Derive first/last name from GitHub's `name` field if present
+    let firstName = "GitHub";
+    let lastName = "";
+    if (ghUser.name && typeof ghUser.name === "string") {
+      const parts = ghUser.name.trim().split(" ");
+      if (parts.length === 1) {
+        firstName = parts[0];
+      } else if (parts.length > 1) {
+        firstName = parts[0];
+        lastName = parts.slice(1).join(" ");
+      }
+    }
+
+    const profilePicture = ghUser.avatar_url || null;
+
+    // 3d) Find-or-create local user
+    let user = await Users.findOne({ where: { provider, providerId } });
+
+    if (!user && email) {
+      const byEmail = await Users.findOne({ where: { email } });
+      if (byEmail) {
+        await byEmail.update({
+          provider,
+          providerId,
+          profilePicture: profilePicture || byEmail.profilePicture,
+        });
+        user = byEmail;
+      }
+    }
+
+    if (!user) {
+      user = await Users.create({
+        id: require("uuid").v4(),
+        provider,
+        providerId,
+        email,
+        isVerified: null,
+        firstName,
+        lastName,
+        profilePicture,
+        password: null, // IMPORTANT: no password for social accounts
+      });
+    }
+
+    // 3e) Issue your JWT
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    // 3f) Redirect back to web or mobile
+
+    if (CLIENT_WEB_URL && !String(state || "").includes("mobile")) {
+      const fragment = q({
+        token,
+        email: user.email || "",
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        photo: user.profilePicture || "",
+        userId: user.id,
+        providerId: user.providerId || providerId,
+        provider,
+      });
+      return res.redirect(`${CLIENT_WEB_URL}/oauth-complete#${fragment}`);
+    }
+
+    const fragment = q({
+      token,
+      email: user.email || "",
+      name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+      photo: user.profilePicture || "",
+      userId: user.id,
+      providerId: user.providerId || providerId,
+      provider,
+    });
+
+    if (recoveredRedirect) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[OAuth/GitHub] Redirecting back to mobile:", recoveredRedirect);
+      }
+      return res.redirect(`${recoveredRedirect}#${fragment}`);
+    }
+
+    if (
+      MOBILE_REDIRECT_SCHEME &&
+      (state === "mobile" || String(state || "").includes("mobile"))
+    ) {
+      const mobileUrl = `${MOBILE_REDIRECT_SCHEME}://oauth-complete`;
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[OAuth/GitHub] Redirecting back to mobile:", mobileUrl);
+      }
+      return res.redirect(`${mobileUrl}#${fragment}`);
+    }
+
+    // Fallback JSON for testing
+    return res.status(200).json({ token, user });
+  } catch (err) {
+    console.error("GitHub OAuth error:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
