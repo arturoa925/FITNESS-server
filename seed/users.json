@@ -7,7 +7,69 @@
       "password": "TrainHard123!",
       "profilePicture": "https://res.cloudinary.com/dpaiwgit7/image/upload/v1761243256/Attachment_vjomln.jpg",
       "profilePicturePublicId": null,
-      "profilePictureProvider": "cloudinary"
+      "profilePictureProvider": "cloudinary",
+      "seedMeta": {
+        "enrolledPrograms": [
+          {
+            "slug": "half-marathon-8-week-prep",
+            "enrolledAt": "2025-11-01",
+            "startDate": "2025-11-03",
+            "currentWeekIndex": 1,
+            "currentDayIndex": 2,
+            "completedWorkouts": [
+              { "weekIndex": 0, "dayIndex": 0, "workoutIndex": 0 },
+              { "weekIndex": 0, "dayIndex": 1, "workoutIndex": 0 },
+              { "weekIndex": 1, "dayIndex": 0, "workoutIndex": 0 }
+            ]
+          }
+        ],
+        "calendarDays": [
+          {
+            "date": "2025-11-03",
+            "workouts": [
+              {
+                "programSlug": "half-marathon-8-week-prep",
+                "title": "Easy Run",
+                "summary": "Easy 3km",
+                "completed": true
+              }
+            ],
+            "foods": [
+              {
+                "id": "food-oats-1",
+                "name": "Oatmeal with berries",
+                "amount": 80,
+                "unit": "g"
+              },
+              {
+                "id": "food-coffee-1",
+                "name": "Black coffee",
+                "amount": 1,
+                "unit": "cup"
+              }
+            ]
+          },
+          {
+            "date": "2025-11-04",
+            "workouts": [
+              {
+                "programSlug": "half-marathon-8-week-prep",
+                "title": "Tempo Run",
+                "summary": "5km tempo",
+                "completed": true
+              }
+            ],
+            "foods": [
+              {
+                "id": "food-burrito-1",
+                "name": "Breakfast burrito",
+                "amount": 1,
+                "unit": "serving"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "2bb4d3e5-90c8-4d3b-a042-3e7c2d1eab22",
@@ -16,7 +78,43 @@
       "email": "maya.lopez@example.com",
       "password": "StrongPass987!",
       "profilePicturePublicId": null,
-      "profilePictureProvider": "cloudinary"
+      "profilePictureProvider": "cloudinary",
+      "seedMeta": {
+        "enrolledPrograms": [
+          {
+            "slug": "kettlebell-foundations-4-week",
+            "enrolledAt": "2025-11-05",
+            "startDate": "2025-11-06",
+            "currentWeekIndex": 0,
+            "currentDayIndex": 3,
+            "completedWorkouts": [
+              { "weekIndex": 0, "dayIndex": 0, "workoutIndex": 0 },
+              { "weekIndex": 0, "dayIndex": 1, "workoutIndex": 0 }
+            ]
+          }
+        ],
+        "calendarDays": [
+          {
+            "date": "2025-11-06",
+            "workouts": [
+              {
+                "programSlug": "kettlebell-foundations-4-week",
+                "title": "Full-body Kettlebell",
+                "summary": "Swings, goblet squats, presses",
+                "completed": true
+              }
+            ],
+            "foods": [
+              {
+                "id": "food-smoothie-1",
+                "name": "Protein smoothie",
+                "amount": 400,
+                "unit": "ml"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "3cc5e4f6-a1d9-4e4c-8b53-4f8d3e2fbc33",
@@ -25,7 +123,64 @@
       "email": "ethan.chen@example.com",
       "password": "Kettlebell2025$",
       "profilePicturePublicId": null,
-      "profilePictureProvider": "cloudinary"
+      "profilePictureProvider": "cloudinary",
+      "seedMeta": {
+        "enrolledPrograms": [
+          {
+            "slug": "calisthenics-flow-6-week",
+            "enrolledAt": "2025-11-02",
+            "startDate": "2025-11-03",
+            "currentWeekIndex": 2,
+            "currentDayIndex": 1,
+            "completedWorkouts": [
+              { "weekIndex": 0, "dayIndex": 0, "workoutIndex": 0 },
+              { "weekIndex": 0, "dayIndex": 2, "workoutIndex": 0 },
+              { "weekIndex": 1, "dayIndex": 0, "workoutIndex": 0 }
+            ]
+          },
+          {
+            "slug": "yoga-foundations-3-week",
+            "enrolledAt": "2025-11-10",
+            "startDate": "2025-11-11",
+            "currentWeekIndex": 0,
+            "currentDayIndex": 0,
+            "completedWorkouts": []
+          }
+        ],
+        "calendarDays": [
+          {
+            "date": "2025-11-03",
+            "workouts": [
+              {
+                "programSlug": "calisthenics-flow-6-week",
+                "title": "Push-Up Ladder",
+                "summary": "Push-ups and core finisher",
+                "completed": true
+              }
+            ],
+            "foods": [
+              {
+                "id": "food-bowl-1",
+                "name": "Rice + chicken bowl",
+                "amount": 1,
+                "unit": "bowl"
+              }
+            ]
+          },
+          {
+            "date": "2025-11-11",
+            "workouts": [
+              {
+                "programSlug": "yoga-foundations-3-week",
+                "title": "Gentle Flow",
+                "summary": "30 min mobility + breathing",
+                "completed": false
+              }
+            ],
+            "foods": []
+          }
+        ]
+      }
     },
     {
       "id": "4dd6f507-b2ea-4f5d-9c64-509e4f30cd44",
