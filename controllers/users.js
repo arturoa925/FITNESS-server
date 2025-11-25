@@ -10,6 +10,7 @@ const bcrypt = require("bcryptjs");
 const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
+const rateLimit = require("express-rate-limit");
 
 require("dotenv").config();
 
@@ -27,6 +28,18 @@ const upload = require("../utils/upload"); // multer (memoryStorage)
 const cloudinary = require("../utils/cloudinary");
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Basic rate limiter for login attempts (per IP)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit to 10 login attempts per window per IP
+  standardHeaders: true, // Return rate limit info in RateLimit-* headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+  message: {
+    message:
+      "Too many login attempts from this IP, please try again after 15 minutes.",
+  },
+});
 
 function normalizeEmail(body) {
   const raw =
@@ -356,7 +369,7 @@ router.post("/register", upload.single("avatar"), async (req, res) => {
 
 // User login
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body);
     if (!email || !req.body || !req.body.password) {
