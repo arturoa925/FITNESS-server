@@ -2,6 +2,8 @@
 
 The REST API behind the [FITNESS mobile app](https://github.com/arturoa925/FITNESS-client). It handles authentication (email/password, Google, GitHub), training program enrollment and progress, AI-generated daily workouts, and a per-user calendar of completed workouts and food entries.
 
+**Case study:** [How FITNESS is designed and built, client and server](https://arturoa925.github.io/projects/fitness/) on my portfolio, covering the architecture, code decisions and trade-offs.
+
 Built with **Node.js, Express 5, Sequelize, and PostgreSQL**.
 
 ---
