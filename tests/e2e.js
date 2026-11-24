@@ -227,6 +227,13 @@ const call=async(m,path,{token,body}={})=>{
   await sleep(800);
   ok('at most 3 reset codes per hour per user',mails(qe,'reset').length===3,mails(qe,'reset').length);
 
+  // a burst of simultaneous requests must not get around the per-user limit (race regression)
+  const re=`burst${sfx}@x.com`;
+  await call('POST','/users/register',{body:{firstName:'B',lastName:'B',email:re,password:'password-R-1'}});
+  await Promise.all(Array.from({length:10},()=>call('POST','/auth/password/forgot',{body:{email:re}})));
+  await sleep(1500);
+  ok('10 simultaneous reset requests still yield at most 3 codes',mails(re,'reset').length===3,mails(re,'reset').length);
+
   // sign out everywhere
   const lo1=await call('POST','/users/login',{body:{email:pe,password:'brand-new-pw-1'}});
   const lo2=await call('POST','/users/login',{body:{email:pe,password:'brand-new-pw-1'}});

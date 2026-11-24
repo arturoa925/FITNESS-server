@@ -267,7 +267,7 @@ curl http://localhost:3004/users/<userId>/calendar?month=11&year=2026 \
 
 ## Tests
 
-`npm test` runs `tests/e2e.js`, an end-to-end suite (125 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
+`npm test` runs `tests/e2e.js`, an end-to-end suite (126 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
 
 ```bash
 npm run seed && npm start &   # in another terminal

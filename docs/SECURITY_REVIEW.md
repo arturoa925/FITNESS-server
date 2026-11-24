@@ -3,7 +3,7 @@
 Branch: `claude/determined-lovelace-lxs1ad` (companion doc in the client repo: `docs/SECURITY_REVIEW.md`)
 
 Verification: I ran the **original** code and the **fixed** code against a real Postgres 16 and a live server.
-`tests/e2e.js` (125 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
+`tests/e2e.js` (126 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
 
 ## Fixed
 
@@ -52,7 +52,7 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - `POST /auth/refresh { refreshToken }` -> new `{ token, refreshToken }`. Only the SHA-256 of the secret is stored; it rotates every use. The previous secret is accepted for 30 s (lost response / concurrent refresh); an older one is treated as theft and ends that session.
 - `POST /users/logout { refreshToken }` revokes the session. Changing the password revokes **all** sessions and Face ID devices and returns a fresh `session` for the caller.
 - Max 10 sessions per user (oldest dropped). New table `RefreshTokens` is created by `sequelize.sync()`.
-- Tests: 125 checks in `tests/e2e.js`.
+- Tests: 126 checks in `tests/e2e.js`.
 
 ## Update: database constraints (replaces "DB-level uniqueness" under *Not fixed*)
 - Unique indexes: `calendars_user_id_date_unique` on `Calendars("userId","date")` and `training_programs_user_id_unique` on `TrainingPrograms("userId")` (template rows with `userId NULL` are still allowed).
@@ -70,8 +70,11 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - **Sign out everywhere:** `POST /auth/logout-all`. **Delete account:** `DELETE /users/:id` (confirm word + password), removes the user and all rows, tokens and devices.
 - **Rate limits** retuned: the blanket `/auth` limiter was 60/15 min/IP, which would have throttled refresh/Face ID for many users behind one IP (campus Wi-Fi). Now 300, with tighter per-endpoint limits on credential routes; all scale with `RATE_LIMIT_MULTIPLIER`. Verified at defaults: login blocks on the 11th try, forgot-password on the 21st.
 - Email transport: `utils/mailer.js` (Resend over HTTPS, console/outbox file in dev). Set `RESEND_API_KEY` and `EMAIL_FROM` to send real mail.
-- Tests: 125 e2e + 18 DB checks (`npm test`, `npm run test:db`).
+- Tests: 126 e2e + 18 DB checks (`npm test`, `npm run test:db`).
 
 ## Update: code health and dependencies
 - **sharp 0.34 -> 0.35.5** (fixes the libvips advisories; relevant because avatar uploads from the unauthenticated `/register` are decoded by it). The exact `uploadAvatar` pipeline (EXIF rotate -> 512x512 WebP) was re-verified, and all suites pass on the new version. `uuid` -> 11.1.1.
 - **ESLint** (`npm run lint`, flat config): 0 errors. Removed leftovers from earlier refactors (unused `jwt`/`JWT_SECRET` in `users.js`, seed variables, an empty catch). CI runs lint before the tests.
+
+## Fix found by CI: reset-code limit race
+The first GitHub Actions runs of the account-recovery work failed on one check: "at most 3 reset codes per hour per user" saw **4** emails. The `forgot` endpoint fires its email without waiting, so a quick burst of requests could each count "0 codes so far" before the first row was saved; the same race existed in production. `issueCode` now does count-then-create inside a transaction guarded by a per-(user, purpose) Postgres advisory lock. Regression test: 10 simultaneous requests yield exactly 3 codes (verified to fail on the old code and pass on the fix; 126 e2e checks).
