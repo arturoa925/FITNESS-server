@@ -33,6 +33,10 @@ Calendar.init(
     {
         sequelize,
         modelName: "Calendar",
+        // one row per user per day (see db/ensureConstraints.js)
+        indexes: [
+            { unique: true, fields: ["userId", "date"], name: "calendars_user_id_date_unique" },
+        ],
     }
 );
 

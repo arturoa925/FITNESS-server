@@ -655,6 +655,9 @@ router.put("/:id/program/update", owner, async (req, res) => {
     try {
       if (!t.finished) await t.rollback();
     } catch {}
+    if (error && error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Please try again" });
+    }
     console.error("Error upserting/switching training program:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -1329,6 +1332,9 @@ router.post("/:id/program/choose", owner, async (req, res) => {
       calendar,
     });
   } catch (error) {
+    if (error && error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Please try again" });
+    }
     console.error("Error choosing training program:", error);
     res.status(500).json({ message: "Internal server error" });
   }

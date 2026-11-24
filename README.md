@@ -272,3 +272,6 @@ BASE_URL=http://localhost:3004 npm test
 
 ## Sessions
 `POST /auth/refresh { refreshToken }` -> `{ token, refreshToken }` (rotating; replaying an old token ends the session). Login/register/OAuth/Face ID responses include `refreshToken`; `POST /users/logout { refreshToken }` revokes it.
+
+## Database constraints
+On startup `db/ensureConstraints.js` merges any duplicate calendar days / per-user programs left from older versions and adds unique indexes (`Calendars(userId,date)`, `TrainingPrograms(userId)`). Test with `npm run test:db`.

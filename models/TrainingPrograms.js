@@ -36,6 +36,10 @@ TrainingPrograms.init(
     {
         sequelize,
         modelName: "TrainingPrograms",
+        // one personal program per user; template rows have userId NULL (NULLs are allowed repeatedly)
+        indexes: [
+            { unique: true, fields: ["userId"], name: "training_programs_user_id_unique" },
+        ],
     }
 );
 

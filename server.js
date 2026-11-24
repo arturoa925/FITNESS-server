@@ -93,6 +93,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Internal server error" });
 });
 
-sequelize.sync({ force: false }).then(() => {
-  app.listen(PORT, () => console.log(`App is listening on port: ${PORT}`));
-});
+const { ensureConstraints } = require("./db/ensureConstraints");
+
+// Merge any legacy duplicate rows and add unique indexes first, then create missing tables.
+ensureConstraints()
+  .then(() => sequelize.sync({ force: false }))
+  .then(() => {
+    app.listen(PORT, () => console.log(`App is listening on port: ${PORT}`));
+  })
+  .catch((err) => {
+    console.error("FATAL: database setup failed:", err);
+    process.exit(1);
+  });

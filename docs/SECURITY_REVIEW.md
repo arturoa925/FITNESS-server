@@ -42,7 +42,6 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - Existing users created through `/register` before this fix have a double-hashed password and still can't log in; they need a password reset (or delete/re-register them).
 
 ## Not fixed (needs a decision or is larger scope)
-- **DB-level uniqueness** (`Calendar(userId,date)`, `TrainingPrograms.userId`): the advisory lock prevents the races, but real constraints need a migration (and a de-dupe of existing rows first).
 - **Email verification for local sign-ups:** an attacker could pre-register someone's email with their own password, which a later social login would then link to. Needs a verify-email flow.
 - **OAuth login-CSRF:** `state` is signed but not bound to the user's browser session.
 - **Timezones:** defaults are UTC dates; clients in US evenings should send an explicit `date`.
@@ -55,3 +54,10 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - `POST /users/logout { refreshToken }` revokes the session. Changing the password revokes **all** sessions and Face ID devices and returns a fresh `session` for the caller.
 - Max 10 sessions per user (oldest dropped). New table `RefreshTokens` is created by `sequelize.sync()`.
 - Tests: 91 checks in `tests/e2e.js`.
+
+## Update: database constraints (replaces "DB-level uniqueness" under *Not fixed*)
+- Unique indexes: `calendars_user_id_date_unique` on `Calendars("userId","date")` and `training_programs_user_id_unique` on `TrainingPrograms("userId")` (template rows with `userId NULL` are still allowed).
+- `db/ensureConstraints.js` runs at every startup **before** `sequelize.sync()`: if the tables already exist it first merges legacy duplicates (calendar rows are unioned, nothing is lost, oldest row kept; per user the most recently updated program is kept), then creates the indexes. Idempotent; a failure aborts startup rather than serving with a half-migrated schema.
+- A losing race on program assignment now returns **409 "Please try again"** instead of 500.
+- Tests: `npm run test:db` (10 checks, creates real duplicates and verifies the merge) plus the e2e suite (91) on both a fresh database and an upgraded one with no indexes.
+- Back up before the first deploy: the startup step deletes the duplicate rows it merged.
