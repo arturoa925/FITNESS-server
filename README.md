@@ -290,3 +290,6 @@ On startup `db/ensureConstraints.js` merges any duplicate calendar days / per-us
 - `POST /auth/verify/send` and `POST /auth/verify/confirm {code}` (signed in) verify the email. Registration sends a code automatically; nothing is blocked while unverified.
 - If someone signs in with Google/GitHub using an address that already has an **unverified** local account, that account's password and sessions are discarded (stops pre-registration takeover).
 - `POST /auth/logout-all` signs out every device. `DELETE /users/:id {confirm:"DELETE", password}` permanently deletes the account and all its data.
+
+## Lint
+`npm run lint` (ESLint flat config, `eslint:recommended`); CI fails on errors.

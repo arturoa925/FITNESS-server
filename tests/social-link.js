@@ -2,7 +2,7 @@
 // Needs the seeded DB. Run: node tests/social-link.js
 require("dotenv").config();
 const sequelize = require("../config/connection");
-const { Users, RefreshTokens } = require("../models");
+const { Users } = require("../models");
 const { resolveSocialUser } = require("../controllers/auth");
 const tokens = require("../utils/tokens");
 

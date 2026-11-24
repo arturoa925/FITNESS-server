@@ -41,6 +41,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Lint (fails on errors)
+        run: npm run lint
       - name: Seed database
         run: npm run seed
       - name: Start server

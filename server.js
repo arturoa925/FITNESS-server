@@ -74,7 +74,6 @@ app.use((req, res) => res.status(404).json({ message: "Not found" }));
 
 // Central error handler: multer/body-parser/etc. errors become clean 4xx JSON
 // instead of Express's default HTML page (which includes stack traces in dev).
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   if (err && err.name === "MulterError") {

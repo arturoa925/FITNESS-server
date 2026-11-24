@@ -21,10 +21,10 @@ try {
     });
 
     // Seed Training Programs
-    const trainingPrograms = await TrainingPrograms.bulkCreate(trainingProgramsData);
+    await TrainingPrograms.bulkCreate(trainingProgramsData);
 
     // Seed Daily Workouts
-    const dailyWorkouts = await DailyWorkout.bulkCreate(dailyWorkoutData);
+    await DailyWorkout.bulkCreate(dailyWorkoutData);
 
     // Seed Calendar based on users.json seedMeta.calendarDays
     const calendarRows = [];

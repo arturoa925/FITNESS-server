@@ -8,7 +8,6 @@ const {
   RefreshTokens,
   VerificationCodes,
 } = require("../models");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
@@ -39,8 +38,6 @@ const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
 const upload = require("../utils/upload"); // multer (memoryStorage)
 const cloudinary = require("../utils/cloudinary");
-
-const JWT_SECRET = process.env.JWT_SECRET;
 
 // Scales every rate limit (tests set this high; leave unset in production).
 const RL = Number(process.env.RATE_LIMIT_MULTIPLIER) || 1;
@@ -661,7 +658,9 @@ router.put("/:id/program/update", owner, async (req, res) => {
     // that back, leaking the real one and its pooled connection).
     try {
       if (!t.finished) await t.rollback();
-    } catch {}
+    } catch {
+      // already rolled back / connection gone: nothing more to do
+    }
     if (error && error.name === "SequelizeUniqueConstraintError") {
       return res.status(409).json({ message: "Please try again" });
     }

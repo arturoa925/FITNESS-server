@@ -2,7 +2,7 @@ const B=process.env.BASE_URL||'http://localhost:3004'; let pass=0, fail=0;
 const ok=(n,c,extra)=>{ if(c){pass++;console.log('PASS',n)} else {fail++;console.log('FAIL',n,extra??'')} };
 const call=async(m,path,{token,body}={})=>{
   const r=await fetch(B+path,{method:m,headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined,redirect:'manual'});
-  let j=null; try{j=await r.json()}catch{} return {s:r.status,j,h:r.headers};
+  let j=null; try{j=await r.json()}catch{ /* non-JSON body */ } return {s:r.status,j,h:r.headers};
 };
 (async()=>{
   const sfx=Date.now();
@@ -50,7 +50,6 @@ const call=async(m,path,{token,body}={})=>{
   ok("B cannot copy A's personal program as template",steal.s===404,steal.s);
   const steal2=await call('POST',`/users/${Bu.id}/program/choose`,{token:Bu.t,body:{programId:aRow}});
   ok("B cannot choose A's personal program",steal2.s===404,steal2.s);
-  const wk=T.workouts?.[0]; 
   const comp=await call('POST',`/users/${A.id}/program/complete`,{token:A.t,body:{programId:aRow,workoutId:'w:0-0-0',date:'2026-02-03',notes:'good'}});
   ok('complete workout',[200,404].includes(comp.s),[comp.s,JSON.stringify(comp.j)]);
   ok('complete rejects bad date',(await call('POST',`/users/${A.id}/program/complete`,{token:A.t,body:{programId:aRow,workoutId:'w:0-0-0',date:'2026-02-31'}})).s===400);

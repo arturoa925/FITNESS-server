@@ -44,7 +44,7 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 ## Not fixed (needs a decision or is larger scope)
 - **OAuth login-CSRF:** `state` is signed but not bound to the user's browser session.
 - **Timezones:** defaults are UTC dates; clients in US evenings should send an explicit `date`.
-- **3 remaining npm advisories** (sharp/libvips and related) need breaking major upgrades; review with `npm audit`.
+- **2 remaining moderate npm advisories**: `uuid` v3/v5/v6 "buf" bounds check inside Sequelize's own nested copy. Sequelize only calls v1/v4 without a buffer, so it isn't reachable; it clears when Sequelize updates its dependency (an `overrides` entry did not take effect and was removed).
 - Real OpenAI and Cloudinary calls and the real Google/GitHub flows were not exercised (no credentials here).
 
 ## Update: refresh tokens (replaces "token revocation / refresh" under *Not fixed*)
@@ -71,3 +71,7 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - **Rate limits** retuned: the blanket `/auth` limiter was 60/15 min/IP, which would have throttled refresh/Face ID for many users behind one IP (campus Wi-Fi). Now 300, with tighter per-endpoint limits on credential routes; all scale with `RATE_LIMIT_MULTIPLIER`. Verified at defaults: login blocks on the 11th try, forgot-password on the 21st.
 - Email transport: `utils/mailer.js` (Resend over HTTPS, console/outbox file in dev). Set `RESEND_API_KEY` and `EMAIL_FROM` to send real mail.
 - Tests: 125 e2e + 18 DB checks (`npm test`, `npm run test:db`).
+
+## Update: code health and dependencies
+- **sharp 0.34 -> 0.35.5** (fixes the libvips advisories; relevant because avatar uploads from the unauthenticated `/register` are decoded by it). The exact `uploadAvatar` pipeline (EXIF rotate -> 512x512 WebP) was re-verified, and all suites pass on the new version. `uuid` -> 11.1.1.
+- **ESLint** (`npm run lint`, flat config): 0 errors. Removed leftovers from earlier refactors (unused `jwt`/`JWT_SECRET` in `users.js`, seed variables, an empty catch). CI runs lint before the tests.
