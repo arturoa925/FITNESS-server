@@ -61,3 +61,6 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - A losing race on program assignment now returns **409 "Please try again"** instead of 500.
 - Tests: `npm run test:db` (10 checks, creates real duplicates and verifies the merge) plus the e2e suite (91) on both a fresh database and an upgraded one with no indexes.
 - Back up before the first deploy: the startup step deletes the duplicate rows it merged.
+
+## Update: CI
+`.github/workflows/test.yml` starts Postgres 16, seeds, boots the server and runs `npm test` (91 e2e checks) and `npm run test:db` (10) on every push/PR, plus a non-blocking `npm audit` for critical issues. The exact step sequence was dry-run locally. Dependabot (npm weekly, Actions monthly) is configured in `.github/dependabot.yml`.
