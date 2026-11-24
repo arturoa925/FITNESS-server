@@ -3,7 +3,7 @@
 Branch: `claude/determined-lovelace-lxs1ad` (companion doc in the client repo: `docs/SECURITY_REVIEW.md`)
 
 Verification: I ran the **original** code and the **fixed** code against a real Postgres 16 and a live server.
-`tests/e2e.js` (91 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
+`tests/e2e.js` (125 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
 
 ## Fixed
 
@@ -42,7 +42,6 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - Existing users created through `/register` before this fix have a double-hashed password and still can't log in; they need a password reset (or delete/re-register them).
 
 ## Not fixed (needs a decision or is larger scope)
-- **Email verification for local sign-ups:** an attacker could pre-register someone's email with their own password, which a later social login would then link to. Needs a verify-email flow.
 - **OAuth login-CSRF:** `state` is signed but not bound to the user's browser session.
 - **Timezones:** defaults are UTC dates; clients in US evenings should send an explicit `date`.
 - **3 remaining npm advisories** (sharp/libvips and related) need breaking major upgrades; review with `npm audit`.
@@ -53,7 +52,7 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 - `POST /auth/refresh { refreshToken }` -> new `{ token, refreshToken }`. Only the SHA-256 of the secret is stored; it rotates every use. The previous secret is accepted for 30 s (lost response / concurrent refresh); an older one is treated as theft and ends that session.
 - `POST /users/logout { refreshToken }` revokes the session. Changing the password revokes **all** sessions and Face ID devices and returns a fresh `session` for the caller.
 - Max 10 sessions per user (oldest dropped). New table `RefreshTokens` is created by `sequelize.sync()`.
-- Tests: 91 checks in `tests/e2e.js`.
+- Tests: 125 checks in `tests/e2e.js`.
 
 ## Update: database constraints (replaces "DB-level uniqueness" under *Not fixed*)
 - Unique indexes: `calendars_user_id_date_unique` on `Calendars("userId","date")` and `training_programs_user_id_unique` on `TrainingPrograms("userId")` (template rows with `userId NULL` are still allowed).
@@ -64,3 +63,11 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 
 ## Update: CI
 `.github/workflows/test.yml` starts Postgres 16, seeds, boots the server and runs `npm test` (91 e2e checks) and `npm run test:db` (10) on every push/PR, plus a non-blocking `npm audit` for critical issues. The exact step sequence was dry-run locally. Dependabot (npm weekly, Actions monthly) is configured in `.github/dependabot.yml`.
+
+## Update: account recovery, verification, deletion
+- **Password reset** by emailed 6-digit code (HMAC-hashed, 15 min, 5 attempts, max 3/hour/user, single use). `forgot` answers identically for unknown/known addresses. A reset revokes every session and Face ID device and returns a fresh session; accounts locked out by the old double-hash bug can recover this way.
+- **Email verification** (`isVerified`): code emailed on registration, confirm in-app. Social sign-in into an *unverified* local account now discards that account's password and sessions, closing the pre-registration takeover. (Fix included a bug found by its own test: the password clear and provider link must be one update because of the model's "password or provider" validation.)
+- **Sign out everywhere:** `POST /auth/logout-all`. **Delete account:** `DELETE /users/:id` (confirm word + password), removes the user and all rows, tokens and devices.
+- **Rate limits** retuned: the blanket `/auth` limiter was 60/15 min/IP, which would have throttled refresh/Face ID for many users behind one IP (campus Wi-Fi). Now 300, with tighter per-endpoint limits on credential routes; all scale with `RATE_LIMIT_MULTIPLIER`. Verified at defaults: login blocks on the 11th try, forgot-password on the 21st.
+- Email transport: `utils/mailer.js` (Resend over HTTPS, console/outbox file in dev). Set `RESEND_API_KEY` and `EMAIL_FROM` to send real mail.
+- Tests: 125 e2e + 18 DB checks (`npm test`, `npm run test:db`).

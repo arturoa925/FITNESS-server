@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require("uuid");
 const { Users, BiometricDevices } = require("../models");
 const tokenauth = require("../utils/tokenauth");
 const tokens = require("../utils/tokens");
+const { checkCode } = require("../utils/codes");
+const { sendResetCode, sendVerificationCode } = require("../utils/accountMail");
 
 const {
   GOOGLE_CLIENT_ID,
@@ -21,11 +23,13 @@ const {
 } = process.env;
 
 const IS_PROD = process.env.NODE_ENV === "production";
+// Scales every rate limit (tests and load checks set this high; leave unset in production).
+const RL = Number(process.env.RATE_LIMIT_MULTIPLIER) || 1;
 const FETCH_TIMEOUT_MS = 10000;
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 300 * RL,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
@@ -158,12 +162,23 @@ async function resolveSocialUser({
 
   const byEmail = await Users.findOne({ where: { email: normalizedEmail } });
   if (byEmail) {
+    // SECURITY (pre-registration takeover): a local account whose email was never verified may
+    // have been created by someone else using THIS person's address. The provider has now proven
+    // who really owns the address, so any password set on that unverified account is discarded
+    // and its sessions/devices are revoked. (One update: the model requires a password OR a
+    // provider, so clearing the password and setting the provider must happen together.)
+    const hijackable = !!byEmail.password && byEmail.isVerified !== true;
     await byEmail.update({
       provider,
       providerId,
       isVerified: true,
+      ...(hijackable ? { password: null } : {}),
       profilePicture: picture || byEmail.profilePicture,
     });
+    if (hijackable) {
+      await tokens.revokeAllRefreshTokens(byEmail.id);
+      await BiometricDevices.destroy({ where: { userId: byEmail.id } });
+    }
     return byEmail;
   }
 
@@ -409,11 +424,111 @@ router.get("/google/callback", async (req, res) => {
   }
 });
 
+// ----------------------- Password reset / email verification -----------------------
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20 * RL,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later." },
+});
+const codeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30 * RL,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts, please try again later." },
+});
+
+const normEmail = (v) => (typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null);
+
+// Always answers the same way so it can't be used to discover which emails have accounts.
+router.post("/password/forgot", forgotLimiter, async (req, res) => {
+  const email = normEmail(req.body && req.body.email);
+  if (email) {
+    const user = await Users.findOne({ where: { email } }).catch(() => null);
+    if (user) sendResetCode(user); // intentionally not awaited (no timing difference)
+  }
+  res.status(200).json({ message: "If that email has an account, we've sent a 6-digit code." });
+});
+
+router.post("/password/reset", codeLimiter, async (req, res) => {
+  const bad = () => res.status(400).json({ message: "Invalid or expired code" });
+  try {
+    const email = normEmail(req.body && req.body.email);
+    const { code, newPassword } = req.body || {};
+    if (!email) return bad();
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    }
+    if (Buffer.byteLength(newPassword) > 72) {
+      return res.status(400).json({ message: "Password is too long (max 72 bytes)" });
+    }
+
+    const user = await Users.findOne({ where: { email } });
+    if (!user || !(await checkCode(user.id, "reset", String(code || "")))) return bad();
+
+    // plaintext: the model hook hashes it. They proved they own the inbox, so mark verified.
+    await user.update({ password: newPassword, isVerified: true });
+    await tokens.revokeAllRefreshTokens(user.id);
+    await BiometricDevices.destroy({ where: { userId: user.id } });
+
+    const session = await tokens.issueSession(user.id);
+    res.status(200).json({ ...session, user: safeUser(user) });
+  } catch (err) {
+    console.error("Password reset error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/verify/send", tokenauth, forgotLimiter, async (req, res) => {
+  try {
+    const user = await Users.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified === true) return res.status(200).json({ alreadyVerified: true });
+    const sent = await sendVerificationCode(user);
+    if (!sent) return res.status(429).json({ message: "Please wait before requesting another code" });
+    res.status(200).json({ message: "Verification code sent" });
+  } catch (err) {
+    console.error("Verify send error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/verify/confirm", tokenauth, codeLimiter, async (req, res) => {
+  try {
+    const user = await Users.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified === true) return res.status(200).json({ verified: true });
+    if (!(await checkCode(user.id, "verify", String((req.body && req.body.code) || "")))) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+    await user.update({ isVerified: true });
+    res.status(200).json({ verified: true });
+  } catch (err) {
+    console.error("Verify confirm error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Sign out of every device: all refresh tokens and Face ID devices. (Access tokens already
+// issued stay valid until they expire, at most 15 minutes.)
+router.post("/logout-all", tokenauth, async (req, res) => {
+  try {
+    const sessions = await tokens.revokeAllRefreshTokens(req.user.id);
+    const devices = await BiometricDevices.destroy({ where: { userId: req.user.id } });
+    res.status(200).json({ sessions, devices });
+  } catch (err) {
+    console.error("Logout-all error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // ------------------------------ Refresh tokens ------------------------------
 // POST /auth/refresh { refreshToken } -> { token, refreshToken } (the refresh token rotates)
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 120,
+  max: 240 * RL,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many refresh attempts, please sign in again." },
@@ -441,7 +556,7 @@ const MAX_DEVICES_PER_USER = 5;
 
 const biometricLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 60 * RL,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many attempts, please sign in with your password." },
@@ -545,3 +660,4 @@ router.delete("/biometric", tokenauth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.resolveSocialUser = resolveSocialUser; // exported for tests

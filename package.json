@@ -7,7 +7,7 @@
     "start": "node server.js",
     "watch": "nodemon server.js",
     "seed": "node seed/index.js",
-    "test:db": "node tests/constraints.js"
+    "test:db": "node tests/constraints.js && node tests/social-link.js"
   },
   "keywords": [],
   "author": "",

@@ -26,6 +26,8 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
       PORT: "3004"
+      MAIL_OUTBOX: ${{ github.workspace }}/mail-outbox.jsonl
+      RATE_LIMIT_MULTIPLIER: "100"
       JWT_SECRET: ci-only-secret-ci-only-secret-1234
       # the OAuth checks only build authorize URLs, no real provider calls are made
       GOOGLE_CLIENT_ID: ci

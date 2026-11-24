@@ -140,6 +140,12 @@ GITHUB_REDIRECT_URI=http://localhost:3004/auth/github/callback
 CLIENT_WEB_URL=http://localhost:5173
 MOBILE_REDIRECT_SCHEME=arturofit
 
+# --- Email (password reset + email verification) ---
+# Sent through Resend (https://resend.com). EMAIL_FROM must be a sender you verified with them.
+# Without these, emails are printed to the server console outside production (nothing is sent in production).
+# RESEND_API_KEY=
+# EMAIL_FROM="Fitness <no-reply@yourdomain.com>"
+
 # --- Security / deployment (all optional) ---
 # Extra browser origins allowed by CORS (comma separated). CLIENT_WEB_URL is allowed automatically.
 # ALLOWED_ORIGINS=https://app.example.com
@@ -154,6 +160,8 @@ MOBILE_REDIRECT_SCHEME=arturofit
 # Local database host/port overrides (defaults: localhost / 5432)
 # DB_HOST=localhost
 # DB_PORT=5432
+# Multiplies every rate limit. Leave unset in production; the test suite sets it high.
+# RATE_LIMIT_MULTIPLIER=1
 # `npm run seed` DROPS ALL TABLES and refuses to run when NODE_ENV=production unless:
 # ALLOW_SEED=true
 ```
@@ -259,11 +267,12 @@ curl http://localhost:3004/users/<userId>/calendar?month=11&year=2026 \
 
 ## Tests
 
-`npm test` runs `tests/e2e.js`, an end-to-end suite (91 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
+`npm test` runs `tests/e2e.js`, an end-to-end suite (125 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
 
 ```bash
 npm run seed && npm start &   # in another terminal
-BASE_URL=http://localhost:3004 npm test
+MAIL_OUTBOX=/tmp/outbox.jsonl RATE_LIMIT_MULTIPLIER=100 npm start &   # start the server like this
+BASE_URL=http://localhost:3004 MAIL_OUTBOX=/tmp/outbox.jsonl npm test
 ```
 (The suite needs `GOOGLE_CLIENT_ID`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_REDIRECT_URI` set on the server for the OAuth checks, and no `OPENAI_API_KEY` for the AI-unavailable check.)
 
@@ -275,3 +284,9 @@ BASE_URL=http://localhost:3004 npm test
 
 ## Database constraints
 On startup `db/ensureConstraints.js` merges any duplicate calendar days / per-user programs left from older versions and adds unique indexes (`Calendars(userId,date)`, `TrainingPrograms(userId)`). Test with `npm run test:db`.
+
+## Accounts: reset, verification, deletion
+- `POST /auth/password/forgot {email}` always answers the same way; a known address gets a 6-digit code (15 min, 5 tries, max 3 per hour). `POST /auth/password/reset {email, code, newPassword}` sets the password, ends every other session and Face ID device, and returns a fresh session.
+- `POST /auth/verify/send` and `POST /auth/verify/confirm {code}` (signed in) verify the email. Registration sends a code automatically; nothing is blocked while unverified.
+- If someone signs in with Google/GitHub using an address that already has an **unverified** local account, that account's password and sessions are discarded (stops pre-registration takeover).
+- `POST /auth/logout-all` signs out every device. `DELETE /users/:id {confirm:"DELETE", password}` permanently deletes the account and all its data.

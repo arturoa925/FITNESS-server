@@ -5,6 +5,8 @@ const {
   DailyWorkout,
   TrainingPrograms,
   BiometricDevices,
+  RefreshTokens,
+  VerificationCodes,
 } = require("../models");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -12,6 +14,7 @@ const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
 const tokens = require("../utils/tokens");
+const { sendVerificationCode } = require("../utils/accountMail");
 const owner = tokenauth.owner; // auth + "the :id in the URL must be YOU"
 const {
   isUuid,
@@ -39,10 +42,13 @@ const cloudinary = require("../utils/cloudinary");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Scales every rate limit (tests set this high; leave unset in production).
+const RL = Number(process.env.RATE_LIMIT_MULTIPLIER) || 1;
+
 // Basic rate limiter for login attempts (per IP)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit to 10 login attempts per window per IP
+  max: 10 * RL, // login attempts per window per IP
   standardHeaders: true, // Return rate limit info in RateLimit-* headers
   legacyHeaders: false, // Disable the X-RateLimit-* headers
   message: {
@@ -54,7 +60,7 @@ const loginLimiter = rateLimit({
 // Limit account creation (also bounds anonymous Cloudinary uploads).
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 20 * RL,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many sign-ups from this IP, please try again later." },
@@ -63,7 +69,7 @@ const registerLimiter = rateLimit({
 // The AI endpoint costs real money: cap it per authenticated user.
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 20 * RL,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `user:${req.user && req.user.id}`,
@@ -427,6 +433,7 @@ router.post("/register", registerLimiter, upload.single("avatar"), async (req, r
     uploadedPublicId = null; // user row now owns the image
 
     const session = await tokens.issueSession(newUser.id);
+    sendVerificationCode(newUser); // fire-and-forget: registration never waits on email
     res.status(201).json({ ...session, user: safeUserJson(newUser) });
   } catch (error) {
     // Don't leave an orphaned image behind if the user row failed to save.
@@ -828,6 +835,43 @@ router.put("/:id", owner, upload.single("avatar"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Permanently delete the account and everything tied to it.
+// Body: { confirm: "DELETE", password? } (password required when the account has one).
+router.delete("/:id", owner, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { confirm, password } = req.body || {};
+    if (confirm !== "DELETE") {
+      return res.status(400).json({ message: 'Send { "confirm": "DELETE" } to delete your account' });
+    }
+    const user = await Users.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.password && !(typeof password === "string" && (await user.validPassword(password)))) {
+      return res.status(403).json({ message: "Password is incorrect" });
+    }
+
+    await sequelize.transaction(async (t) => {
+      const where = { where: { userId }, transaction: t };
+      await Calendar.destroy(where);
+      await TrainingPrograms.destroy(where);
+      await DailyWorkout.destroy(where);
+      await BiometricDevices.destroy(where);
+      await RefreshTokens.destroy(where);
+      await VerificationCodes.destroy(where);
+      await user.destroy({ transaction: t });
+    });
+
+    // best effort: remove their uploaded avatar
+    if (user.profilePicturePublicId && user.profilePictureProvider === "cloudinary") {
+      cloudinary.uploader.destroy(user.profilePicturePublicId).catch(() => {});
+    }
+    res.status(200).json({ message: "Account deleted" });
+  } catch (error) {
+    console.error("Error deleting account:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
