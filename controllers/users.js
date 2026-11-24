@@ -4,12 +4,24 @@ const {
   Calendar,
   DailyWorkout,
   TrainingPrograms,
+  BiometricDevices,
+  RefreshTokens,
+  VerificationCodes,
 } = require("../models");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
+const tokens = require("../utils/tokens");
+const { sendVerificationCode } = require("../utils/accountMail");
+const owner = tokenauth.owner; // auth + "the :id in the URL must be YOU"
+const {
+  isUuid,
+  isDateStr,
+  isHttpUrl,
+  todayStr,
+  jsonSize,
+} = require("../utils/validate");
 const rateLimit = require("express-rate-limit");
 
 require("dotenv").config();
@@ -27,12 +39,13 @@ const sharp = require("sharp");
 const upload = require("../utils/upload"); // multer (memoryStorage)
 const cloudinary = require("../utils/cloudinary");
 
-const JWT_SECRET = process.env.JWT_SECRET;
+// Scales every rate limit (tests set this high; leave unset in production).
+const RL = Number(process.env.RATE_LIMIT_MULTIPLIER) || 1;
 
 // Basic rate limiter for login attempts (per IP)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit to 10 login attempts per window per IP
+  max: 10 * RL, // login attempts per window per IP
   standardHeaders: true, // Return rate limit info in RateLimit-* headers
   legacyHeaders: false, // Disable the X-RateLimit-* headers
   message: {
@@ -40,6 +53,33 @@ const loginLimiter = rateLimit({
       "Too many login attempts from this IP, please try again after 15 minutes.",
   },
 });
+
+// Limit account creation (also bounds anonymous Cloudinary uploads).
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20 * RL,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many sign-ups from this IP, please try again later." },
+});
+
+// The AI endpoint costs real money: cap it per authenticated user.
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20 * RL,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `user:${req.user && req.user.id}`,
+  message: { message: "AI workout limit reached, please try again later." },
+});
+
+const MAX_NAME_LEN = 100;
+const MAX_NOTES_LEN = 2000;
+const MAX_FOOD_BYTES = 10 * 1024;
+const MAX_FOODS_PER_DAY = 200;
+
+// Hash of a random string, used so unknown-email logins cost the same as real ones.
+const DUMMY_HASH = bcrypt.hashSync(uuidv4(), 10);
 
 function normalizeEmail(body) {
   const raw =
@@ -50,39 +90,62 @@ function normalizeEmail(body) {
 }
 
 /**
+ * Run `mutate(calendar)` against the (userId, date) calendar row inside a
+ * transaction guarded by a per-(user,date) advisory lock. This serializes the
+ * read-modify-write on the JSONB arrays (no lost updates) and prevents two
+ * concurrent first-writes from creating duplicate rows.
+ */
+async function withCalendar(userId, date, mutate) {
+  return sequelize.transaction(async (t) => {
+    await sequelize.query("SELECT pg_advisory_xact_lock(hashtext(:k))", {
+      replacements: { k: `${userId}:${date}` },
+      transaction: t,
+    });
+    let calendar = await Calendar.findOne({
+      where: { userId, date },
+      transaction: t,
+    });
+    if (!calendar) {
+      calendar = await Calendar.create(
+        { userId, date, workouts: [], foods: [] },
+        { transaction: t }
+      );
+    }
+    await mutate(calendar, t);
+    return calendar;
+  });
+}
+
+/**
  * Upsert a calendar entry and append a workout (with dedupe by externalId or id).
  * @param {string} userId
  * @param {string} date - YYYY-MM-DD
  * @param {object} workout - arbitrary workout payload
  */
 async function addWorkoutToCalendar(userId, date, workout) {
-  const [calendar] = await Calendar.findOrCreate({
-    where: { userId, date },
-    defaults: { workouts: [], foods: [] },
-  });
+  return withCalendar(userId, date, async (calendar, t) => {
+    const wid = workout.id || uuidv4();
+    const payload = { ...workout, id: wid };
 
-  const wid = workout.id || uuidv4();
-  const payload = { id: wid, ...workout };
+    const exists = (calendar.workouts || []).some((w) => {
+      if (payload.externalId && w.externalId) {
+        return String(w.externalId) === String(payload.externalId);
+      }
+      return String(w.id) === String(payload.id);
+    });
 
-  const exists = (calendar.workouts || []).some((w) => {
-    if (payload.externalId && w.externalId) {
-      return String(w.externalId) === String(payload.externalId);
+    if (!exists) {
+      calendar.workouts = [...(calendar.workouts || []), payload];
+      await calendar.save({ transaction: t });
     }
-    return String(w.id) === String(payload.id);
   });
-
-  if (!exists) {
-    calendar.workouts = [...(calendar.workouts || []), payload];
-    await calendar.save();
-  }
-  return calendar;
 }
 
 /**
  * Ask an LLM for a balanced daily workout (JSON only).
  * Returns { id, exercises }. Throws with code "AI_*" on errors.
  */
-async function generateDailyWorkoutWithAI(userId) {
+async function generateDailyWorkoutWithAI() {
   if (!process.env.OPENAI_API_KEY || !OpenAIClient) {
     const err = new Error("AI provider is not configured");
     err.code = "AI_UNAVAILABLE";
@@ -117,7 +180,8 @@ async function generateDailyWorkoutWithAI(userId) {
     "- Use only the fields above; omit anything else.",
   ].join(" ");
 
-  const userPrompt = `Create today's balanced daily workout for user ${userId}. Respond with JSON only matching the schema.`;
+  const userPrompt =
+    "Create today's balanced daily workout. Respond with JSON only matching the schema.";
 
   // Timeout guard
   const controller = new AbortController();
@@ -127,7 +191,7 @@ async function generateDailyWorkoutWithAI(userId) {
   try {
     completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
-      temperature: 0.7,
+      // (no `temperature`: gpt-5-family models only accept the default value)
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -274,34 +338,56 @@ function findWorkoutByPathOrKey(
   };
 }
 
+// Upload an already-validated image buffer to Cloudinary as a 512x512 webp avatar.
+async function uploadAvatar(buffer) {
+  const processed = await sharp(buffer)
+    .rotate() // respect EXIF
+    .resize(512, 512, { fit: "cover" })
+    .webp({ quality: 85 })
+    .toBuffer();
+  const base64 = `data:image/webp;base64,${processed.toString("base64")}`;
+  // `folder` already prefixes the public id, so only pass the bare uuid.
+  const result = await cloudinary.uploader.upload(base64, {
+    public_id: uuidv4(),
+    folder: "avatars",
+    resource_type: "image",
+  });
+  return { url: result.secure_url, publicId: result.public_id };
+}
+
+const safeUserJson = (user) => {
+  const out = user.toJSON();
+  delete out.password;
+  return out;
+};
+
 // create a new user (optional avatar upload via multipart/form-data field "avatar")
-router.post("/register", upload.single("avatar"), async (req, res) => {
+router.post("/register", registerLimiter, upload.single("avatar"), async (req, res) => {
+  let uploadedPublicId = null;
   try {
-    const {
-      firstName,
-      lastName,
-      password,
-      profilePicture,
-      profilePictureUrl,
-    } = req.body || {};
+    const { firstName, lastName, password, profilePicture, profilePictureUrl } =
+      req.body || {};
     const email = normalizeEmail(req.body);
 
     if (!email) {
-      return res
-        .status(400)
-        .json({ message: "Email is required" });
+      return res.status(400).json({ message: "Email is required" });
     }
-
     if (!password || typeof password !== "string") {
-      return res
-        .status(400)
-        .json({ message: "Password is required" });
+      return res.status(400).json({ message: "Password is required" });
     }
-
     if (password.length < 8) {
       return res.status(400).json({
         message: "Password must be at least 8 characters long",
       });
+    }
+    // bcrypt only uses the first 72 bytes; reject longer ones instead of silently truncating.
+    if (Buffer.byteLength(password) > 72) {
+      return res.status(400).json({ message: "Password is too long (max 72 bytes)" });
+    }
+    for (const [label, v] of [["First name", firstName], ["Last name", lastName]]) {
+      if (typeof v !== "string" || !v.trim() || v.length > MAX_NAME_LEN) {
+        return res.status(400).json({ message: `${label} is required` });
+      }
     }
 
     const existingUser = await Users.findOne({ where: { email } });
@@ -309,70 +395,65 @@ router.post("/register", upload.single("avatar"), async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password before save
-    const hashed = await bcrypt.hash(password, 10);
-
-    // Handle optional avatar upload to Cloudinary
     let avatarUrl = null;
     let avatarPublicId = null;
+    const directUrl = profilePictureUrl || profilePicture;
 
     if (req.file && req.file.buffer) {
       try {
-        const processed = await sharp(req.file.buffer)
-          .rotate() // respect EXIF
-          .resize(512, 512, { fit: "cover" })
-          .webp({ quality: 85 })
-          .toBuffer();
-
-        const base64 = `data:image/webp;base64,${processed.toString("base64")}`;
-        const publicId = `avatars/${uuidv4()}`;
-        const result = await cloudinary.uploader.upload(base64, {
-          public_id: publicId,
-          folder: "avatars",
-          overwrite: true,
-          resource_type: "image",
-        });
-
-        avatarUrl = result.secure_url;
-        avatarPublicId = result.public_id;
+        const up = await uploadAvatar(req.file.buffer);
+        avatarUrl = up.url;
+        avatarPublicId = uploadedPublicId = up.publicId;
       } catch (e) {
         console.error("Cloudinary upload error:", e);
         return res.status(500).json({ message: "Failed to upload avatar" });
       }
-    } else if (profilePictureUrl || profilePicture) {
-      // If client passed a direct URL, accept it
-      avatarUrl = profilePictureUrl || profilePicture;
+    } else if (directUrl) {
+      if (!isHttpUrl(directUrl)) {
+        return res.status(400).json({ message: "Invalid profile picture URL" });
+      }
+      avatarUrl = directUrl;
     }
 
+    // NOTE: pass the PLAINTEXT password. The model's beforeCreate hook hashes it;
+    // hashing here as well stored bcrypt(bcrypt(pw)) and made login impossible.
     const newUser = await Users.create({
       id: uuidv4(),
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       email,
-      password: hashed,
+      password,
       profilePicture: avatarUrl || undefined,
       profilePicturePublicId: avatarPublicId || undefined,
       profilePictureProvider: avatarPublicId ? "cloudinary" : undefined,
     });
+    uploadedPublicId = null; // user row now owns the image
 
-    const token = jwt.sign({ id: newUser.id }, JWT_SECRET, { expiresIn: "1h" });
-
-    const safeUser = newUser.toJSON();
-    delete safeUser.password;
-
-    res.status(201).json({ token, user: safeUser });
+    const session = await tokens.issueSession(newUser.id);
+    sendVerificationCode(newUser); // fire-and-forget: registration never waits on email
+    res.status(201).json({ ...session, user: safeUserJson(newUser) });
   } catch (error) {
+    // Don't leave an orphaned image behind if the user row failed to save.
+    if (uploadedPublicId) {
+      cloudinary.uploader.destroy(uploadedPublicId).catch(() => {});
+    }
+    if (error && error.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: "User already exists" });
+    }
+    if (error && error.name === "SequelizeValidationError") {
+      return res.status(400).json({ message: "Invalid user data" });
+    }
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // User login
-
 router.post("/login", loginLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body);
-    if (!email || !req.body || !req.body.password) {
+    const password = req.body && req.body.password;
+    if (!email || !password || typeof password !== "string") {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
@@ -380,22 +461,20 @@ router.post("/login", loginLimiter, async (req, res) => {
 
     const user = await Users.findOne({ where: { email } });
 
-    if (!user) {
+    // Same response (and similar work) whether the user is missing, has no local
+    // password (social-only account), or typed the wrong password.
+    const valid = user
+      ? await user.validPassword(password)
+      : (await bcrypt.compare(password, DUMMY_HASH), false);
+
+    if (!user || !valid) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const validPassword = await bcrypt.compare(
-      req.body.password,
-      user.password
-    );
+    const session = await tokens.issueSession(user.id);
 
-    if (!validPassword) {
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
-
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
-
-    res.status(200).json({ token, user });
+    // never send the password hash back
+    res.status(200).json({ ...session, user: safeUserJson(user) });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -403,36 +482,42 @@ router.post("/login", loginLimiter, async (req, res) => {
 });
 
 // logout user
+// Access tokens are short-lived (15 min) and can't be revoked individually, but the
+// refresh token is: logging out ends this session so it can't mint new access tokens.
 router.post("/logout", tokenauth, async (req, res) => {
   try {
-    // Invalidate the token by simply not returning it
-    res.status(200).json({ message: "User logged out successfully" });
+    const revoked = await tokens.revokeRefreshToken(req.user.id, req.body && req.body.refreshToken);
+    res.status(200).json({ message: "User logged out successfully", revoked });
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-// get all users
-router.get("/", async (req, res) => {
+// current user (declared before "/:id" so "me" isn't parsed as an id)
+router.get("/me", tokenauth, async (req, res) => {
   try {
-    const users = await Users.findAll({
+    const user = await Users.findByPk(req.user.id, {
       attributes: { exclude: ["password"] },
     });
-
-    res.status(200).json(users);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json(user);
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching current user:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
+// NOTE: the old unauthenticated `GET /users` (listed every user's email/name/
+// provider ids) was removed. Nothing in the client used it.
+
 // * user training programs routes
 
-// get all training programs
+// get all training program TEMPLATES (rows with no owner).
+// Per-user copies live in the same table and must never be exposed here.
 router.get("/training-programs", async (req, res) => {
   try {
-    const programs = await TrainingPrograms.findAll();
+    const programs = await TrainingPrograms.findAll({ where: { userId: null } });
     res.status(200).json(programs);
   } catch (error) {
     console.error("Error fetching training programs:", error);
@@ -441,7 +526,7 @@ router.get("/training-programs", async (req, res) => {
 });
 
 // check if user has a training program
-router.get("/:id/training-programs", tokenauth, async (req, res) => {
+router.get("/:id/training-programs", owner, async (req, res) => {
   try {
     const trainingProgram = await TrainingPrograms.findOne({
       where: { userId: req.params.id },
@@ -459,16 +544,12 @@ router.get("/:id/training-programs", tokenauth, async (req, res) => {
 });
 
 // Upsert & switch user training program (transactional and hardened)
-router.put("/:id/program/update", tokenauth, async (req, res) => {
+router.put("/:id/program/update", owner, async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const userId = req.params.id;
     const { programId, ...patch } = req.body || {};
 
-    if (!userId) {
-      await t.rollback();
-      return res.status(400).json({ message: "Missing user id" });
-    }
     if (programId && !uuidRe.test(String(programId))) {
       await t.rollback();
       return res.status(400).json({ message: "Invalid programId format" });
@@ -478,7 +559,7 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
     let existing = await TrainingPrograms.findOne({
       where: { userId },
       transaction: t,
-      lock: true,
+      lock: t.LOCK.UPDATE,
     });
 
     // SWITCH by template id
@@ -486,18 +567,11 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
       const template = await TrainingPrograms.findByPk(programId, {
         transaction: t,
       });
-      if (!template) {
+      // Only real templates (no owner) may be copied. Treating other users'
+      // personal rows as templates leaked their data.
+      if (!template || template.userId) {
         await t.rollback();
         return res.status(404).json({ message: "Template program not found" });
-      }
-
-      // Prevent using user's own row as template
-      if (String(template.userId || "") === String(userId)) {
-        await t.rollback();
-        return res.status(400).json({
-          message:
-            "Provided programId refers to the user's existing row, not a template",
-        });
       }
 
       if (existing) {
@@ -522,9 +596,8 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
         workouts: template.workouts,
       };
 
-      let programRow;
       if (!existing) {
-        programRow = await TrainingPrograms.create(
+        const programRow = await TrainingPrograms.create(
           { userId, ...payload },
           { transaction: t }
         );
@@ -532,26 +605,41 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
         return res
           .status(201)
           .json({ message: "Program assigned to user", program: programRow });
-      } else {
-        programRow = await existing.update(payload, { transaction: t });
-        await t.commit();
-        return res
-          .status(200)
-          .json({ message: "Program switched", program: programRow });
       }
+      const programRow = await existing.update(payload, { transaction: t });
+      await t.commit();
+      return res
+        .status(200)
+        .json({ message: "Program switched", program: programRow });
     }
 
-    // PATCH existing (or create) with allowed fields only
+    // PATCH existing (or create) with allowed, validated fields only
     const sanitized = {};
     for (const k of Object.keys(patch || {})) {
       if (ALLOWED_PROGRAM_PATCH.has(k)) sanitized[k] = patch[k];
     }
-    if (sanitized.duration != null)
+    if ("name" in sanitized && (typeof sanitized.name !== "string" || !sanitized.name.trim() || sanitized.name.length > 200)) {
+      await t.rollback();
+      return res.status(400).json({ message: "Invalid name" });
+    }
+    if ("description" in sanitized && (typeof sanitized.description !== "string" || sanitized.description.length > 5000)) {
+      await t.rollback();
+      return res.status(400).json({ message: "Invalid description" });
+    }
+    if (sanitized.duration != null) {
       sanitized.duration = Number(sanitized.duration);
+      if (!Number.isInteger(sanitized.duration) || sanitized.duration < 1 || sanitized.duration > 104) {
+        await t.rollback();
+        return res.status(400).json({ message: "Invalid duration" });
+      }
+    }
+    if ("workouts" in sanitized && (!Array.isArray(sanitized.workouts) || jsonSize(sanitized.workouts) > 1024 * 1024)) {
+      await t.rollback();
+      return res.status(400).json({ message: "Invalid workouts" });
+    }
 
-    let programRow;
     if (!existing) {
-      programRow = await TrainingPrograms.create(
+      const programRow = await TrainingPrograms.create(
         { userId, ...sanitized },
         { transaction: t }
       );
@@ -559,24 +647,30 @@ router.put("/:id/program/update", tokenauth, async (req, res) => {
       return res
         .status(201)
         .json({ message: "Program created for user", program: programRow });
-    } else {
-      programRow = await existing.update(sanitized, { transaction: t });
-      await t.commit();
-      return res
-        .status(200)
-        .json({ message: "Program updated", program: programRow });
     }
+    const programRow = await existing.update(sanitized, { transaction: t });
+    await t.commit();
+    return res
+      .status(200)
+      .json({ message: "Program updated", program: programRow });
   } catch (error) {
+    // Roll back THIS transaction (the old code created a new one and rolled
+    // that back, leaking the real one and its pooled connection).
     try {
-      await sequelize.transaction().rollback();
-    } catch {}
+      if (!t.finished) await t.rollback();
+    } catch {
+      // already rolled back / connection gone: nothing more to do
+    }
+    if (error && error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Please try again" });
+    }
     console.error("Error upserting/switching training program:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // Get user profile by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", owner, async (req, res) => {
   try {
     const user = await Users.findByPk(req.params.id, {
       attributes: { exclude: ["password"] },
@@ -594,14 +688,10 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update user profile
-router.put("/:id", tokenauth, upload.single("avatar"), async (req, res) => {
+router.put("/:id", owner, upload.single("avatar"), async (req, res) => {
+  let newPublicId = null;
   try {
     const userId = req.params.id;
-
-    // Only allow the authenticated user to update their own profile
-    if (String(req.user.id) !== String(userId)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
 
     const user = await Users.findByPk(userId);
     if (!user) {
@@ -614,107 +704,173 @@ router.put("/:id", tokenauth, upload.single("avatar"), async (req, res) => {
       lastName,
       email: rawEmail,
       password,
+      currentPassword,
       profilePicture,
       profilePictureUrl,
     } = req.body || {};
 
     const updates = {};
 
-    if (typeof firstName === "string") updates.firstName = firstName;
-    if (typeof lastName === "string") updates.lastName = lastName;
+    for (const [key, v] of [["firstName", firstName], ["lastName", lastName]]) {
+      if (typeof v === "string") {
+        if (!v.trim() || v.length > MAX_NAME_LEN) {
+          return res.status(400).json({ message: `Invalid ${key}` });
+        }
+        updates[key] = v.trim();
+      }
+    }
 
-    // Normalize email if provided
     if (rawEmail) {
       const normalized = normalizeEmail({ email: rawEmail });
       if (!normalized) {
         return res.status(400).json({ message: "Invalid email format" });
       }
-      updates.email = normalized;
+      if (normalized !== user.email) {
+        const taken = await Users.findOne({ where: { email: normalized } });
+        if (taken) {
+          return res.status(409).json({ message: "Email already in use" });
+        }
+        updates.email = normalized;
+      }
     }
 
-    // Handle profile picture updates
     // Start from existing avatar values so we can decide whether they changed
     let avatarUrl = user.profilePicture;
     let avatarPublicId = user.profilePicturePublicId;
     let avatarProvider = user.profilePictureProvider;
+    const oldCloudinaryId =
+      user.profilePicturePublicId && user.profilePictureProvider === "cloudinary"
+        ? user.profilePicturePublicId
+        : null;
+    let replacedAvatar = false;
+
+    const directUrl =
+      (typeof profilePictureUrl === "string" && profilePictureUrl.trim()) ||
+      (typeof profilePicture === "string" && profilePicture.trim()) ||
+      null;
 
     if (req.file && req.file.buffer) {
-      // New avatar file uploaded via multipart/form-data field "avatar"
       try {
-        const processed = await sharp(req.file.buffer)
-          .rotate() // respect EXIF
-          .resize(512, 512, { fit: "cover" })
-          .webp({ quality: 85 })
-          .toBuffer();
-
-        const base64 = `data:image/webp;base64,${processed.toString("base64")}`;
-        const publicId = `avatars/${uuidv4()}`;
-        const result = await cloudinary.uploader.upload(base64, {
-          public_id: publicId,
-          folder: "avatars",
-          overwrite: true,
-          resource_type: "image",
-        });
-
-        // Best-effort cleanup of previous Cloudinary avatar, if any
-        if (avatarPublicId && avatarProvider === "cloudinary") {
-          try {
-            await cloudinary.uploader.destroy(avatarPublicId);
-          } catch (e) {
-            console.error("Cloudinary destroy error on profile update:", e);
-          }
-        }
-
-        avatarUrl = result.secure_url;
-        avatarPublicId = result.public_id;
+        const up = await uploadAvatar(req.file.buffer);
+        avatarUrl = up.url;
+        avatarPublicId = newPublicId = up.publicId;
         avatarProvider = "cloudinary";
+        replacedAvatar = true;
       } catch (e) {
         console.error("Cloudinary upload error on profile update:", e);
         return res.status(500).json({ message: "Failed to upload avatar" });
       }
-    } else if (
-      typeof profilePictureUrl === "string" &&
-      profilePictureUrl.trim().length
-    ) {
-      // Direct URL provided by client
-      avatarUrl = profilePictureUrl.trim();
+    } else if (directUrl) {
+      if (!isHttpUrl(directUrl)) {
+        return res.status(400).json({ message: "Invalid profile picture URL" });
+      }
+      avatarUrl = directUrl;
       avatarPublicId = null;
       avatarProvider = "external";
-    } else if (
-      typeof profilePicture === "string" &&
-      profilePicture.trim().length
-    ) {
-      // Backwards-compat: plain profilePicture string
-      avatarUrl = profilePicture.trim();
-      avatarPublicId = null;
-      avatarProvider = "external";
+      replacedAvatar = directUrl !== user.profilePicture;
     }
 
-    // Only write avatar fields if something actually changed
     if (avatarUrl !== user.profilePicture) {
       updates.profilePicture = avatarUrl;
-      updates.profilePicturePublicId = avatarPublicId || undefined;
-      updates.profilePictureProvider = avatarProvider || undefined;
+      // null (not undefined) so a stale Cloudinary id is actually cleared
+      updates.profilePicturePublicId = avatarPublicId || null;
+      updates.profilePictureProvider = avatarProvider || null;
     }
 
-    // If password is being updated, hash it
+    // Password change: pass PLAINTEXT to the model (its beforeUpdate hook hashes it;
+    // hashing here too double-hashed it and broke login).
     if (password) {
       if (typeof password !== "string" || password.length < 8) {
         return res.status(400).json({
           message: "Password must be at least 8 characters long",
         });
       }
-      updates.password = await bcrypt.hash(password, 10);
+      if (Buffer.byteLength(password) > 72) {
+        return res.status(400).json({ message: "Password is too long (max 72 bytes)" });
+      }
+      // Accounts that already have a local password must prove they know it, so a
+      // stolen access token alone can't permanently take over the account.
+      if (user.password) {
+        if (typeof currentPassword !== "string" || !(await user.validPassword(currentPassword))) {
+          return res.status(403).json({ message: "Current password is incorrect" });
+        }
+      }
+      updates.password = password;
     }
 
-    const updatedUser = await user.update(updates);
+    let updatedUser;
+    try {
+      updatedUser = await user.update(updates);
+    } catch (e) {
+      if (newPublicId) cloudinary.uploader.destroy(newPublicId).catch(() => {});
+      if (e && e.name === "SequelizeUniqueConstraintError") {
+        return res.status(409).json({ message: "Email already in use" });
+      }
+      if (e && e.name === "SequelizeValidationError") {
+        return res.status(400).json({ message: "Invalid user data" });
+      }
+      throw e;
+    }
 
-    const safeUser = updatedUser.toJSON();
-    delete safeUser.password;
+    // A changed password signs out every other session and Face ID device. The caller gets
+    // a brand-new session in the response so they stay signed in.
+    let newSession = null;
+    if (updates.password) {
+      await BiometricDevices.destroy({ where: { userId } });
+      await tokens.revokeAllRefreshTokens(userId);
+      newSession = await tokens.issueSession(userId);
+    }
 
-    return res.status(200).json(safeUser);
+    // Best-effort cleanup of the previous Cloudinary avatar, only after the save succeeded.
+    if (replacedAvatar && oldCloudinaryId && oldCloudinaryId !== newPublicId) {
+      cloudinary.uploader.destroy(oldCloudinaryId).catch((e) =>
+        console.error("Cloudinary destroy error on profile update:", e)
+      );
+    }
+
+    return res.status(200).json({
+      ...safeUserJson(updatedUser),
+      ...(newSession ? { session: newSession } : {}),
+    });
   } catch (error) {
     console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Permanently delete the account and everything tied to it.
+// Body: { confirm: "DELETE", password? } (password required when the account has one).
+router.delete("/:id", owner, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { confirm, password } = req.body || {};
+    if (confirm !== "DELETE") {
+      return res.status(400).json({ message: 'Send { "confirm": "DELETE" } to delete your account' });
+    }
+    const user = await Users.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.password && !(typeof password === "string" && (await user.validPassword(password)))) {
+      return res.status(403).json({ message: "Password is incorrect" });
+    }
+
+    await sequelize.transaction(async (t) => {
+      const where = { where: { userId }, transaction: t };
+      await Calendar.destroy(where);
+      await TrainingPrograms.destroy(where);
+      await DailyWorkout.destroy(where);
+      await BiometricDevices.destroy(where);
+      await RefreshTokens.destroy(where);
+      await VerificationCodes.destroy(where);
+      await user.destroy({ transaction: t });
+    });
+
+    // best effort: remove their uploaded avatar
+    if (user.profilePicturePublicId && user.profilePictureProvider === "cloudinary") {
+      cloudinary.uploader.destroy(user.profilePicturePublicId).catch(() => {});
+    }
+    res.status(200).json({ message: "Account deleted" });
+  } catch (error) {
+    console.error("Error deleting account:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -723,28 +879,29 @@ router.put("/:id", tokenauth, upload.single("avatar"), async (req, res) => {
 
 // Generate a standalone daily workout (AI-powered; no local fallback)
 // POST /ai/daily-workout
-// Body: { userId: string, save?: boolean, date?: 'YYYY-MM-DD' }
-router.post("/ai/daily-workout", tokenauth, async (req, res) => {
+// Body: { save?: boolean, date?: 'YYYY-MM-DD' }   (the user is taken from the token)
+router.post("/ai/daily-workout", tokenauth, aiLimiter, async (req, res) => {
   try {
-    const { userId, save = false } = req.body || {};
-    let { date } = req.body || {};
+    const userId = req.user.id; // never trust a userId from the body
+    const { save = false } = req.body || {};
+    const date = req.body && req.body.date;
 
-    if (!userId) return res.status(400).json({ message: "userId is required" });
+    if (date !== undefined && date !== null && !isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
 
     const user = await Users.findByPk(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Internet-only: call AI; no arrays, no fallback
     const {
       id: workoutId,
       exercises,
       roundsOptions,
-    } = await generateDailyWorkoutWithAI(userId);
+    } = await generateDailyWorkoutWithAI();
 
     let calendar = null;
-    if (save || req.body?.date) {
-      const today = new Date().toISOString().split("T")[0];
-      const effectiveDate = date || today;
+    if (save || date) {
+      const effectiveDate = date || todayStr();
       const payload = {
         source: "daily",
         externalId: `daily:${workoutId}:date:${effectiveDate}`,
@@ -780,10 +937,12 @@ router.post("/ai/daily-workout", tokenauth, async (req, res) => {
 });
 
 // check if user has a daily workout
-router.get("/:id/daily-workout", tokenauth, async (req, res) => {
+router.get("/:id/daily-workout", owner, async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
-    const date = req.query.date || today;
+    const date = req.query.date || todayStr();
+    if (!isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
     const preview =
       String(req.query.preview || "false").toLowerCase() === "true";
 
@@ -827,7 +986,7 @@ router.get("/:id/daily-workout", tokenauth, async (req, res) => {
 // * user calendar routes
 
 // get user calendar entries with daily workouts and training programs (range + enrichment)
-router.get("/:id/calendar", tokenauth, async (req, res) => {
+router.get("/:id/calendar", owner, async (req, res) => {
   try {
     const { from, to, month, year, date } = req.query;
     const where = { userId: req.params.id };
@@ -835,6 +994,20 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
     // Optional: only return workouts that are marked completed === true
     const onlyCompleted =
       String(req.query.onlyCompleted || "false").toLowerCase() === "true";
+
+    if (date !== undefined && !isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
+    if ((from !== undefined || to !== undefined) && !(isDateStr(from) && isDateStr(to))) {
+      return res.status(400).json({ message: "from and to must both be YYYY-MM-DD" });
+    }
+    if (month !== undefined || year !== undefined) {
+      const mi = Number(month);
+      const yi = Number(year);
+      if (!Number.isInteger(mi) || mi < 1 || mi > 12 || !Number.isInteger(yi) || yi < 1970 || yi > 2200) {
+        return res.status(400).json({ message: "Invalid month/year" });
+      }
+    }
 
     // Default ranges
     const today = new Date();
@@ -863,7 +1036,7 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
     } else if (month && year) {
       const mmInt = Number(month); // 1-12
       const mm = String(mmInt).padStart(2, "0");
-      const lastDay = new Date(Number(year), mmInt, 0).getDate();
+      const lastDay = new Date(Date.UTC(Number(year), mmInt, 0)).getUTCDate();
       where.date = {
         [Op.between]: [
           `${year}-${mm}-01`,
@@ -956,11 +1129,12 @@ router.get("/:id/calendar", tokenauth, async (req, res) => {
 
 // get all food using today's date as default
 
-router.get("/:id/calendar/foods", tokenauth, async (req, res) => {
+router.get("/:id/calendar/foods", owner, async (req, res) => {
   try {
-    const today = new Date();
-    const defaultDate = today.toISOString().split("T")[0];
-    const date = req.query.date || defaultDate;
+    const date = req.query.date || todayStr();
+    if (!isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
 
     const calendar = await Calendar.findOne({
       where: { userId: req.params.id, date },
@@ -979,22 +1153,34 @@ router.get("/:id/calendar/foods", tokenauth, async (req, res) => {
 });
 
 // Add food to a specific day
-router.post("/:id/calendar/foods", tokenauth, async (req, res) => {
+router.post("/:id/calendar/foods", owner, async (req, res) => {
   try {
-    const { date, food } = req.body; // expect { date, food: { id?, name, calories, photoUrl, ... } }
+    const { date, food } = req.body || {};
     if (!date || !food)
       return res
         .status(400)
         .json({ message: "Date and food object are required" });
+    if (!isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
+    if (typeof food !== "object" || Array.isArray(food) || jsonSize(food) > MAX_FOOD_BYTES) {
+      return res.status(400).json({ message: "Invalid food object" });
+    }
 
-    const [calendar] = await Calendar.findOrCreate({
-      where: { userId: req.params.id, date },
-      defaults: { foods: [], workouts: [] },
+    let tooMany = false;
+    const calendar = await withCalendar(req.params.id, date, async (cal, t) => {
+      if ((cal.foods || []).length >= MAX_FOODS_PER_DAY) {
+        tooMany = true;
+        return;
+      }
+      // id last so a null/undefined id in `food` can't blank the generated one
+      const withId = { ...food, id: food.id || uuidv4() };
+      cal.foods = [...(cal.foods || []), withId];
+      await cal.save({ transaction: t });
     });
-
-    const withId = { id: food.id || uuidv4(), ...food };
-    calendar.foods = [...(calendar.foods || []), withId];
-    await calendar.save();
+    if (tooMany) {
+      return res.status(400).json({ message: "Too many foods logged for this day" });
+    }
 
     res.status(200).json(calendar);
   } catch (error) {
@@ -1004,26 +1190,30 @@ router.post("/:id/calendar/foods", tokenauth, async (req, res) => {
 });
 
 // Remove a food from a specific day by id (date and foodId from body)
-router.delete("/:id/calendar/foods", tokenauth, async (req, res) => {
+router.delete("/:id/calendar/foods", owner, async (req, res) => {
   try {
-    const { date, foodId } = req.body;
+    const { date, foodId } = req.body || {};
     if (!date || !foodId) {
       return res.status(400).json({ message: "Date and foodId are required" });
     }
+    if (!isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
 
-    const calendar = await Calendar.findOne({
+    const exists = await Calendar.findOne({
       where: { userId: req.params.id, date },
+      attributes: ["id"],
     });
-
-    if (!calendar) {
+    if (!exists) {
       return res.status(404).json({ message: "Calendar not found" });
     }
 
-    const before = calendar.foods || [];
-    calendar.foods = before.filter(
-      (item) => String(item.id) !== String(foodId)
-    );
-    await calendar.save();
+    const calendar = await withCalendar(req.params.id, date, async (cal, t) => {
+      cal.foods = (cal.foods || []).filter(
+        (item) => String(item.id) !== String(foodId)
+      );
+      await cal.save({ transaction: t });
+    });
 
     res.status(200).json(calendar);
   } catch (error) {
@@ -1038,10 +1228,16 @@ router.delete("/:id/calendar/foods", tokenauth, async (req, res) => {
 // Log (or fetch) a daily workout by picking a random catalog item by id
 // If body contains { workoutId }, use that specific daily workout instead of random
 // If body contains { date }, it will be added to the user's calendar; otherwise it only returns the random workout
-router.post("/:id/daily-workout/log", tokenauth, async (req, res) => {
+router.post("/:id/daily-workout/log", owner, async (req, res) => {
   try {
     const { date, workoutId } = req.body || {};
-    const effectiveDate = date || new Date().toISOString().split("T")[0];
+    const effectiveDate = date || todayStr();
+    if (!isDateStr(effectiveDate)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
+    if (workoutId && !isUuid(workoutId)) {
+      return res.status(400).json({ message: "Invalid workoutId" });
+    }
 
     // Pick a specific template by id when provided, else a random one from the catalog
     let template;
@@ -1084,17 +1280,21 @@ router.post("/:id/daily-workout/log", tokenauth, async (req, res) => {
 });
 
 // Choose a training program and add it to the calendar
-router.post("/:id/program/choose", tokenauth, async (req, res) => {
+router.post("/:id/program/choose", owner, async (req, res) => {
   try {
     const userId = req.params.id;
     const { programId, date } = req.body || {};
 
-    if (!programId) {
-      return res.status(400).json({ message: "Program ID is required" });
+    if (!programId || !isUuid(String(programId))) {
+      return res.status(400).json({ message: "A valid program ID is required" });
+    }
+    if (date !== undefined && date !== null && !isDateStr(date)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
     }
 
     const template = await TrainingPrograms.findByPk(programId);
-    if (!template) {
+    // Only owner-less templates may be copied (other users' rows are private).
+    if (!template || template.userId) {
       return res.status(404).json({ message: "Training program not found" });
     }
 
@@ -1145,7 +1345,7 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
       message = "Program switched";
     }
 
-    const effectiveDate = date || new Date().toISOString().split("T")[0];
+    const effectiveDate = date || todayStr();
     const calendarPayload = {
       source: "program",
       externalId: `program:${userProgram.id}:start:${effectiveDate}`,
@@ -1175,6 +1375,9 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
       calendar,
     });
   } catch (error) {
+    if (error && error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Please try again" });
+    }
     console.error("Error choosing training program:", error);
     res.status(500).json({ message: "Internal server error" });
   }
@@ -1183,7 +1386,7 @@ router.post("/:id/program/choose", tokenauth, async (req, res) => {
 // complete a specific workout in a training program using a synthetic id (w:x-y-z) — Option B
 // the index goes (weekIndex, dayIndex, workoutIndex) or a synthetic id (e.g., w:0-1-0)
 // use the new id generated from the GET /:id/training-program endpoint
-router.post("/:id/program/complete", tokenauth, async (req, res) => {
+router.post("/:id/program/complete", owner, async (req, res) => {
   try {
     const userId = req.params.id;
     const {
@@ -1208,7 +1411,16 @@ router.post("/:id/program/complete", tokenauth, async (req, res) => {
       });
     }
 
-    const effectiveDate = date || new Date().toISOString().split("T")[0];
+    const effectiveDate = date || todayStr();
+    if (!isDateStr(effectiveDate)) {
+      return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    }
+    if (!isUuid(String(programId))) {
+      return res.status(400).json({ message: "Invalid programId" });
+    }
+    if (notes != null && (typeof notes !== "string" || notes.length > MAX_NOTES_LEN)) {
+      return res.status(400).json({ message: "Invalid notes" });
+    }
 
     // Load program and ensure it belongs to the user
     const program = await TrainingPrograms.findByPk(programId);

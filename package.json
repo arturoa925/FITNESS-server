@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node tests/e2e.js",
     "start": "node server.js",
     "watch": "nodemon server.js",
-    "seed": "node seed/index.js"
+    "seed": "node seed/index.js",
+    "test:db": "node tests/constraints.js && node tests/social-link.js",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
@@ -24,7 +26,12 @@
     "openai": "^6.9.1",
     "pg": "^8.16.3",
     "sequelize": "^6.37.7",
-    "sharp": "^0.34.4",
-    "uuid": "^11.1.0"
+    "sharp": "^0.35.5",
+    "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0"
   }
 }

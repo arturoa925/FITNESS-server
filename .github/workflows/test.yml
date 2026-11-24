@@ -1,0 +1,65 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fit
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_NAME: fit
+      DB_USER: postgres
+      DB_PW: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      PORT: "3004"
+      MAIL_OUTBOX: ${{ github.workspace }}/mail-outbox.jsonl
+      RATE_LIMIT_MULTIPLIER: "100"
+      JWT_SECRET: ci-only-secret-ci-only-secret-1234
+      # the OAuth checks only build authorize URLs, no real provider calls are made
+      GOOGLE_CLIENT_ID: ci
+      GOOGLE_REDIRECT_URI: http://localhost:3004/auth/google/callback
+      GITHUB_CLIENT_ID: ci
+      GITHUB_REDIRECT_URI: http://localhost:3004/auth/github/callback
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint (fails on errors)
+        run: npm run lint
+      - name: Seed database
+        run: npm run seed
+      - name: Start server
+        run: |
+          node server.js > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3004/users/training-programs > /dev/null && exit 0
+            sleep 1
+          done
+          echo "server did not start"; cat server.log; exit 1
+      - name: End-to-end tests
+        run: npm test
+      - name: Database constraint tests
+        run: npm run test:db
+      - name: Server log (on failure)
+        if: failure()
+        run: cat server.log
+      - name: Dependency audit (fails on critical only)
+        run: npm audit --omit=dev --audit-level=critical
+        continue-on-error: true
