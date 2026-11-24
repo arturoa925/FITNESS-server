@@ -130,3 +130,5 @@ dist
 .pnp.*
 
 .DS_Store
+# database backups contain user data
+backups/
