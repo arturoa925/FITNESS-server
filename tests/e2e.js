@@ -105,6 +105,37 @@ const call=async(m,path,{token,body}={})=>{
   const st=good.j.params.state;
   ok('oauth state cannot be used as API token',(await call('GET','/users/me',{token:st})).s===401);
   ok('CORS: evil origin gets no ACAO header',!(await fetch(B+'/users/training-programs',{headers:{origin:'https://evil.example'}})).headers.get('access-control-allow-origin'));
+  // Biometric (Face ID) device login
+  const bu=await call('POST','/users/register',{body:{firstName:'F',lastName:'F',email:`face${sfx}@x.com`,password:'password-F-1'}});
+  const F={id:bu.j.user.id,t:bu.j.token};
+  ok('enroll requires auth',(await call('POST','/auth/biometric/enroll',{body:{}})).s===401);
+  const en=await call('POST','/auth/biometric/enroll',{token:F.t,body:{deviceName:'iPhone'}});
+  ok('enroll returns deviceToken',en.s===201&&/^[0-9a-f-]{36}\.[0-9a-f]{64}$/.test(en.j.deviceToken),[en.s,JSON.stringify(en.j)]);
+  const dt1=en.j.deviceToken;
+  const bl=await call('POST','/auth/biometric/login',{body:{deviceToken:dt1}});
+  ok('biometric login issues JWT usable on API',bl.s===200&&(await call('GET','/users/me',{token:bl.j.token})).j?.id===F.id,bl.s);
+  ok('biometric login response has no password',bl.j.user&&!('password' in bl.j.user));
+  const dt2=bl.j.deviceToken;
+  ok('device token rotates',dt2&&dt2!==dt1);
+  const replay=await call('POST','/auth/biometric/login',{body:{deviceToken:dt1}});
+  ok('old (replayed) token rejected',replay.s===401);
+  ok('replay kills the device (new token also dead)',(await call('POST','/auth/biometric/login',{body:{deviceToken:dt2}})).s===401);
+  ok('garbage deviceToken -> 401',(await call('POST','/auth/biometric/login',{body:{deviceToken:'nope'}})).s===401);
+  ok('missing deviceToken -> 401',(await call('POST','/auth/biometric/login',{body:{}})).s===401);
+  const en2=await call('POST','/auth/biometric/enroll',{token:F.t,body:{}});
+  const en3=await call('POST','/auth/biometric/enroll',{token:F.t,body:{}});
+  ok('can enroll several devices',en2.s===201&&en3.s===201);
+  const rv=await call('DELETE','/auth/biometric',{token:F.t,body:{deviceToken:en2.j.deviceToken}});
+  ok('revoke one device',rv.s===200&&rv.j.revoked===1);
+  ok('revoked device cannot log in',(await call('POST','/auth/biometric/login',{body:{deviceToken:en2.j.deviceToken}})).s===401);
+  ok('other device still works',(await call('POST','/auth/biometric/login',{body:{deviceToken:en3.j.deviceToken}})).s===200);
+  const en4=await call('POST','/auth/biometric/enroll',{token:F.t,body:{}});
+  const pw=await call('PUT',`/users/${F.id}`,{token:F.t,body:{password:'password-F-2',currentPassword:'password-F-1'}});
+  ok('password change ok',pw.s===200,pw.s);
+  ok('password change revokes all Face ID devices',(await call('POST','/auth/biometric/login',{body:{deviceToken:en4.j.deviceToken}})).s===401);
+  const other=await call('POST','/auth/biometric/enroll',{token:A.t,body:{}});
+  ok("one user's token can't be revoked by another",(await call('DELETE','/auth/biometric',{token:Bu.t,body:{deviceToken:other.j.deviceToken}})).j.revoked===0);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail?1:0);
 })();

@@ -3,7 +3,7 @@
 Branch: `claude/determined-lovelace-lxs1ad` (companion doc in the client repo: `docs/SECURITY_REVIEW.md`)
 
 Verification: I ran the **original** code and the **fixed** code against a real Postgres 16 and a live server.
-`tests/e2e.js` (58 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
+`tests/e2e.js` (74 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
 
 ## Fixed
 

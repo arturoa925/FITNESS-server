@@ -4,7 +4,8 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const { v4: uuidv4 } = require("uuid");
-const { Users } = require("../models");
+const { Users, BiometricDevices } = require("../models");
+const tokenauth = require("../utils/tokenauth");
 
 const {
   GOOGLE_CLIENT_ID,
@@ -406,6 +407,119 @@ router.get("/google/callback", async (req, res) => {
     return finish(res, stateData, user, "google");
   } catch (err) {
     return handleError(res, "Google", err);
+  }
+});
+
+// ------------------------- Biometric (Face ID) login -------------------------
+// Flow: after a normal login the app calls /biometric/enroll and keeps the returned
+// deviceToken in the OS keychain behind Face ID. Later, Face ID unlocks it and the
+// app calls /biometric/login to get a fresh JWT. The token rotates on every use.
+const BIOMETRIC_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days, sliding
+const MAX_DEVICES_PER_USER = 5;
+
+const biometricLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts, please sign in with your password." },
+});
+
+const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+const newSecret = () => crypto.randomBytes(32).toString("hex");
+const issueJwt = (userId) =>
+  jwt.sign({ id: userId }, JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" });
+
+// deviceToken format: "<deviceRowId>.<secret>"
+function parseDeviceToken(raw) {
+  if (typeof raw !== "string" || raw.length > 200) return null;
+  const [id, secret] = raw.split(".");
+  if (!id || !secret || !/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f]{64}$/.test(secret)) return null;
+  return { id, secret };
+}
+
+router.post("/biometric/enroll", tokenauth, biometricLimiter, async (req, res) => {
+  try {
+    const deviceName =
+      typeof req.body?.deviceName === "string" ? req.body.deviceName.slice(0, 100) : null;
+
+    // Keep only the newest devices so the table can't grow without bound.
+    const existing = await BiometricDevices.findAll({
+      where: { userId: req.user.id },
+      order: [["createdAt", "DESC"]],
+    });
+    for (const old of existing.slice(MAX_DEVICES_PER_USER - 1)) await old.destroy();
+
+    const secret = newSecret();
+    const device = await BiometricDevices.create({
+      userId: req.user.id,
+      secretHash: sha256(secret),
+      deviceName,
+      expiresAt: new Date(Date.now() + BIOMETRIC_TTL_MS),
+    });
+    res.status(201).json({ deviceToken: `${device.id}.${secret}` });
+  } catch (err) {
+    console.error("Biometric enroll error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/biometric/login", biometricLimiter, async (req, res) => {
+  const fail = () => res.status(401).json({ message: "Biometric login is no longer valid. Please sign in with your password." });
+  try {
+    const parsed = parseDeviceToken(req.body?.deviceToken);
+    if (!parsed) return fail();
+
+    const device = await BiometricDevices.findByPk(parsed.id);
+    if (!device) return fail();
+
+    const given = Buffer.from(sha256(parsed.secret), "hex");
+    const stored = Buffer.from(device.secretHash, "hex");
+    if (given.length !== stored.length || !crypto.timingSafeEqual(given, stored)) {
+      // Wrong secret for a real device id: assume the token leaked/was replayed.
+      await device.destroy();
+      return fail();
+    }
+    if (device.expiresAt < new Date()) {
+      await device.destroy();
+      return fail();
+    }
+
+    const user = await Users.findByPk(device.userId);
+    if (!user) {
+      await device.destroy();
+      return fail();
+    }
+
+    // Rotate: a stolen copy of the old token stops working after the next use.
+    const secret = newSecret();
+    await device.update({
+      secretHash: sha256(secret),
+      lastUsedAt: new Date(),
+      expiresAt: new Date(Date.now() + BIOMETRIC_TTL_MS),
+    });
+
+    res.status(200).json({
+      token: issueJwt(user.id),
+      deviceToken: `${device.id}.${secret}`,
+      user: safeUser(user),
+    });
+  } catch (err) {
+    console.error("Biometric login error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Turn Face ID off. With { deviceToken } revokes that device; without, all of the user's devices.
+router.delete("/biometric", tokenauth, async (req, res) => {
+  try {
+    const parsed = parseDeviceToken(req.body?.deviceToken);
+    const where = { userId: req.user.id, ...(parsed ? { id: parsed.id } : {}) };
+    const removed = await BiometricDevices.destroy({ where });
+    res.status(200).json({ revoked: removed });
+  } catch (err) {
+    console.error("Biometric revoke error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

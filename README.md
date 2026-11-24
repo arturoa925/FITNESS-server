@@ -259,10 +259,13 @@ curl http://localhost:3004/users/<userId>/calendar?month=11&year=2026 \
 
 ## Tests
 
-`npm test` runs `tests/e2e.js`, an end-to-end suite (58 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
+`npm test` runs `tests/e2e.js`, an end-to-end suite (74 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
 
 ```bash
 npm run seed && npm start &   # in another terminal
 BASE_URL=http://localhost:3004 npm test
 ```
 (The suite needs `GOOGLE_CLIENT_ID`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_REDIRECT_URI` set on the server for the OAuth checks, and no `OPENAI_API_KEY` for the AI-unavailable check.)
+
+## Face ID / biometric login API
+`POST /auth/biometric/enroll` (JWT) → `{ deviceToken }` · `POST /auth/biometric/login` `{ deviceToken }` → `{ token, deviceToken (rotated), user }` · `DELETE /auth/biometric` (JWT, optional `{ deviceToken }`). Tokens are stored hashed, rotate on every use, expire after 90 days idle, and are revoked on password change. See the client repo's `docs/FACE_ID.md`.

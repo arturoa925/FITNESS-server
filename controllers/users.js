@@ -4,6 +4,7 @@ const {
   Calendar,
   DailyWorkout,
   TrainingPrograms,
+  BiometricDevices,
 } = require("../models");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -799,6 +800,11 @@ router.put("/:id", owner, upload.single("avatar"), async (req, res) => {
         return res.status(400).json({ message: "Invalid user data" });
       }
       throw e;
+    }
+
+    // A changed password signs out every Face ID device (they must re-enroll).
+    if (updates.password) {
+      await BiometricDevices.destroy({ where: { userId } });
     }
 
     // Best-effort cleanup of the previous Cloudinary avatar, only after the save succeeded.
