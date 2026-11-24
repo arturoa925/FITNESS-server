@@ -136,6 +136,48 @@ const call=async(m,path,{token,body}={})=>{
   const other=await call('POST','/auth/biometric/enroll',{token:A.t,body:{}});
   ok("one user's token can't be revoked by another",(await call('DELETE','/auth/biometric',{token:Bu.t,body:{deviceToken:other.j.deviceToken}})).j.revoked===0);
 
+  // Refresh tokens / short-lived access tokens
+  const rl=await call('POST','/users/login',{body:{email:`a${sfx}@x.com`,password:'new-password-1'}});
+  ok('login returns refreshToken',/^[0-9a-f-]{36}\.[0-9a-f]{64}$/.test(rl.j.refreshToken||''));
+  const jwtLib=require('jsonwebtoken');
+  const secret=process.env.JWT_SECRET||'testsecret-testsecret-123456';
+  const expired=jwtLib.sign({id:A.id},secret,{expiresIn:-10});
+  const ex=await call('GET','/users/me',{token:expired});
+  ok('expired access token -> 401 "Token expired"',ex.s===401&&/expired/i.test(ex.j.message),[ex.s,ex.j]);
+  ok('access token lifetime is short (<=15m)',(()=>{const d=jwtLib.decode(rl.j.token);return d.exp-d.iat<=900})());
+  const r1=rl.j.refreshToken;
+  const f1=await call('POST','/auth/refresh',{body:{refreshToken:r1}});
+  ok('refresh works',f1.s===200&&f1.j.token&&f1.j.refreshToken&&f1.j.refreshToken!==r1,[f1.s,f1.j]);
+  ok('refreshed access token is usable',(await call('GET','/users/me',{token:f1.j.token})).j?.id===A.id);
+  const r2=f1.j.refreshToken;
+  const grace=await call('POST','/auth/refresh',{body:{refreshToken:r1}});
+  ok('previous token accepted inside grace window (lost response / concurrent refresh)',grace.s===200,grace.s);
+  const r3=grace.j.refreshToken;
+  const f3=await call('POST','/auth/refresh',{body:{refreshToken:r3}});
+  ok('rotation continues',f3.s===200);
+  const replay2=await call('POST','/auth/refresh',{body:{refreshToken:r1}});
+  ok('stale token (2+ rotations old) rejected',replay2.s===401,replay2.s);
+  ok('replay ends the whole session',(await call('POST','/auth/refresh',{body:{refreshToken:f3.j.refreshToken}})).s===401);
+  ok('garbage refresh token -> 401',(await call('POST','/auth/refresh',{body:{refreshToken:'x'}})).s===401);
+  ok('missing refresh token -> 401',(await call('POST','/auth/refresh',{body:{}})).s===401);
+  // logout revokes
+  const lo=await call('POST','/users/login',{body:{email:`a${sfx}@x.com`,password:'new-password-1'}});
+  const out=await call('POST','/users/logout',{token:lo.j.token,body:{refreshToken:lo.j.refreshToken}});
+  ok('logout revokes refresh token',out.s===200&&out.j.revoked===1,[out.s,out.j]);
+  ok('revoked refresh token cannot refresh',(await call('POST','/auth/refresh',{body:{refreshToken:lo.j.refreshToken}})).s===401);
+  // password change: other sessions die, caller gets a fresh session
+  const s1=await call('POST','/users/login',{body:{email:`a${sfx}@x.com`,password:'new-password-1'}});
+  const s2=await call('POST','/users/login',{body:{email:`a${sfx}@x.com`,password:'new-password-1'}});
+  const pc2=await call('PUT',`/users/${A.id}`,{token:s1.j.token,body:{password:'third-password-1',currentPassword:'new-password-1'}});
+  ok('password change returns a fresh session',pc2.s===200&&pc2.j.session?.refreshToken&&pc2.j.session?.token,[pc2.s]);
+  ok('password change revokes other sessions',(await call('POST','/auth/refresh',{body:{refreshToken:s2.j.refreshToken}})).s===401);
+  ok('fresh session from password change works',(await call('POST','/auth/refresh',{body:{refreshToken:pc2.j.session.refreshToken}})).s===200);
+  // biometric login hands back a refresh token too
+  const bf=await call('POST','/users/register',{body:{firstName:'G',lastName:'G',email:`g${sfx}@x.com`,password:'password-G-1'}});
+  const ben=await call('POST','/auth/biometric/enroll',{token:bf.j.token,body:{}});
+  const bli=await call('POST','/auth/biometric/login',{body:{deviceToken:ben.j.deviceToken}});
+  ok('biometric login returns refreshToken',bli.s===200&&!!bli.j.refreshToken&&(await call('POST','/auth/refresh',{body:{refreshToken:bli.j.refreshToken}})).s===200);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail?1:0);
 })();

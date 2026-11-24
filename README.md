@@ -158,7 +158,7 @@ MOBILE_REDIRECT_SCHEME=arturofit
 # ALLOW_SEED=true
 ```
 
-`JWT_SECRET` is required (min. 16 characters); the server exits at startup without it.
+`ACCESS_TOKEN_TTL` (default `15m`) and `REFRESH_TOKEN_TTL_DAYS` (default `30`) control session length. `JWT_SECRET` is required (min. 16 characters); the server exits at startup without it.
 
 > Postgres folds unquoted names to lowercase, so `CREATE DATABASE FITNESSapp` creates a database named `fitnessapp`. Set `DB_NAME` to match.
 
@@ -259,7 +259,7 @@ curl http://localhost:3004/users/<userId>/calendar?month=11&year=2026 \
 
 ## Tests
 
-`npm test` runs `tests/e2e.js`, an end-to-end suite (74 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
+`npm test` runs `tests/e2e.js`, an end-to-end suite (91 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
 
 ```bash
 npm run seed && npm start &   # in another terminal
@@ -269,3 +269,6 @@ BASE_URL=http://localhost:3004 npm test
 
 ## Face ID / biometric login API
 `POST /auth/biometric/enroll` (JWT) → `{ deviceToken }` · `POST /auth/biometric/login` `{ deviceToken }` → `{ token, deviceToken (rotated), user }` · `DELETE /auth/biometric` (JWT, optional `{ deviceToken }`). Tokens are stored hashed, rotate on every use, expire after 90 days idle, and are revoked on password change. See the client repo's `docs/FACE_ID.md`.
+
+## Sessions
+`POST /auth/refresh { refreshToken }` -> `{ token, refreshToken }` (rotating; replaying an old token ends the session). Login/register/OAuth/Face ID responses include `refreshToken`; `POST /users/logout { refreshToken }` revokes it.

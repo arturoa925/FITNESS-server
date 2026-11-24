@@ -6,6 +6,7 @@ const rateLimit = require("express-rate-limit");
 const { v4: uuidv4 } = require("uuid");
 const { Users, BiometricDevices } = require("../models");
 const tokenauth = require("../utils/tokenauth");
+const tokens = require("../utils/tokens");
 
 const {
   GOOGLE_CLIENT_ID,
@@ -180,13 +181,11 @@ async function resolveSocialUser({
 }
 
 // Issue our JWT and send the browser/app back to the right place.
-function finish(res, stateData, user, provider) {
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-    algorithm: "HS256",
-    expiresIn: "1h",
-  });
+async function finish(res, stateData, user, provider) {
+  const { token, refreshToken } = await tokens.issueSession(user.id);
   const fragment = q({
     token,
+    refreshToken,
     email: user.email || "",
     name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
     photo: user.profilePicture || "",
@@ -209,7 +208,7 @@ function finish(res, stateData, user, provider) {
 
   // JSON fallback is for local testing (Insomnia etc.) only.
   if (!IS_PROD) {
-    return res.status(200).json({ token, user: safeUser(user) });
+    return res.status(200).json({ token, refreshToken, user: safeUser(user) });
   }
   return res.status(400).json({ message: "No redirect target configured" });
 }
@@ -320,7 +319,7 @@ router.get("/github/callback", async (req, res) => {
       picture: ghUser.avatar_url || null,
     });
 
-    return finish(res, stateData, user, "github");
+    return await finish(res, stateData, user, "github");
   } catch (err) {
     return handleError(res, "GitHub", err);
   }
@@ -404,9 +403,32 @@ router.get("/google/callback", async (req, res) => {
       picture: profile.picture || null,
     });
 
-    return finish(res, stateData, user, "google");
+    return await finish(res, stateData, user, "google");
   } catch (err) {
     return handleError(res, "Google", err);
+  }
+});
+
+// ------------------------------ Refresh tokens ------------------------------
+// POST /auth/refresh { refreshToken } -> { token, refreshToken } (the refresh token rotates)
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many refresh attempts, please sign in again." },
+});
+
+router.post("/refresh", refreshLimiter, async (req, res) => {
+  try {
+    const result = await tokens.rotateRefreshToken(req.body && req.body.refreshToken);
+    if (!result) {
+      return res.status(401).json({ message: "Session expired. Please sign in again." });
+    }
+    res.status(200).json({ token: result.token, refreshToken: result.refreshToken });
+  } catch (err) {
+    console.error("Refresh error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -427,8 +449,6 @@ const biometricLimiter = rateLimit({
 
 const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 const newSecret = () => crypto.randomBytes(32).toString("hex");
-const issueJwt = (userId) =>
-  jwt.sign({ id: userId }, JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" });
 
 // deviceToken format: "<deviceRowId>.<secret>"
 function parseDeviceToken(raw) {
@@ -499,8 +519,9 @@ router.post("/biometric/login", biometricLimiter, async (req, res) => {
       expiresAt: new Date(Date.now() + BIOMETRIC_TTL_MS),
     });
 
+    const session = await tokens.issueSession(user.id);
     res.status(200).json({
-      token: issueJwt(user.id),
+      ...session,
       deviceToken: `${device.id}.${secret}`,
       user: safeUser(user),
     });

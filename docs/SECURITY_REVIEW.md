@@ -3,7 +3,7 @@
 Branch: `claude/determined-lovelace-lxs1ad` (companion doc in the client repo: `docs/SECURITY_REVIEW.md`)
 
 Verification: I ran the **original** code and the **fixed** code against a real Postgres 16 and a live server.
-`tests/e2e.js` (74 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
+`tests/e2e.js` (91 checks, run with `npm test`) passes on the fixed code. Original-code results are noted per item.
 
 ## Fixed
 
@@ -43,9 +43,15 @@ Verification: I ran the **original** code and the **fixed** code against a real 
 
 ## Not fixed (needs a decision or is larger scope)
 - **DB-level uniqueness** (`Calendar(userId,date)`, `TrainingPrograms.userId`): the advisory lock prevents the races, but real constraints need a migration (and a de-dupe of existing rows first).
-- **Token revocation / refresh tokens:** JWTs are stateless with a 1-hour life; logout can't invalidate them and there's no refresh flow, so users re-login hourly.
 - **Email verification for local sign-ups:** an attacker could pre-register someone's email with their own password, which a later social login would then link to. Needs a verify-email flow.
 - **OAuth login-CSRF:** `state` is signed but not bound to the user's browser session.
 - **Timezones:** defaults are UTC dates; clients in US evenings should send an explicit `date`.
 - **3 remaining npm advisories** (sharp/libvips and related) need breaking major upgrades; review with `npm audit`.
 - Real OpenAI and Cloudinary calls and the real Google/GitHub flows were not exercised (no credentials here).
+
+## Update: refresh tokens (replaces "token revocation / refresh" under *Not fixed*)
+- Access JWT lifetime is now **15 min** (`ACCESS_TOKEN_TTL`). Login, register, OAuth and Face ID return a `refreshToken` (`"<id>.<secret>"`, 30-day sliding, `REFRESH_TOKEN_TTL_DAYS`).
+- `POST /auth/refresh { refreshToken }` -> new `{ token, refreshToken }`. Only the SHA-256 of the secret is stored; it rotates every use. The previous secret is accepted for 30 s (lost response / concurrent refresh); an older one is treated as theft and ends that session.
+- `POST /users/logout { refreshToken }` revokes the session. Changing the password revokes **all** sessions and Face ID devices and returns a fresh `session` for the caller.
+- Max 10 sessions per user (oldest dropped). New table `RefreshTokens` is created by `sequelize.sync()`.
+- Tests: 91 checks in `tests/e2e.js`.

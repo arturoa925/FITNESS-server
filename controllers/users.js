@@ -11,6 +11,7 @@ const bcrypt = require("bcryptjs");
 const sequelize = require("../config/connection");
 const { Op } = require("sequelize");
 const tokenauth = require("../utils/tokenauth");
+const tokens = require("../utils/tokens");
 const owner = tokenauth.owner; // auth + "the :id in the URL must be YOU"
 const {
   isUuid,
@@ -425,11 +426,8 @@ router.post("/register", registerLimiter, upload.single("avatar"), async (req, r
     });
     uploadedPublicId = null; // user row now owns the image
 
-    const token = jwt.sign({ id: newUser.id }, JWT_SECRET, {
-      algorithm: "HS256",
-      expiresIn: "1h",
-    });
-    res.status(201).json({ token, user: safeUserJson(newUser) });
+    const session = await tokens.issueSession(newUser.id);
+    res.status(201).json({ ...session, user: safeUserJson(newUser) });
   } catch (error) {
     // Don't leave an orphaned image behind if the user row failed to save.
     if (uploadedPublicId) {
@@ -469,13 +467,10 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-      algorithm: "HS256",
-      expiresIn: "1h",
-    });
+    const session = await tokens.issueSession(user.id);
 
     // never send the password hash back
-    res.status(200).json({ token, user: safeUserJson(user) });
+    res.status(200).json({ ...session, user: safeUserJson(user) });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -483,10 +478,16 @@ router.post("/login", loginLimiter, async (req, res) => {
 });
 
 // logout user
-// JWTs are stateless: the server can't revoke them before they expire (1h).
-// The client is responsible for discarding the token.
+// Access tokens are short-lived (15 min) and can't be revoked individually, but the
+// refresh token is: logging out ends this session so it can't mint new access tokens.
 router.post("/logout", tokenauth, async (req, res) => {
-  res.status(200).json({ message: "User logged out successfully" });
+  try {
+    const revoked = await tokens.revokeRefreshToken(req.user.id, req.body && req.body.refreshToken);
+    res.status(200).json({ message: "User logged out successfully", revoked });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 // current user (declared before "/:id" so "me" isn't parsed as an id)
@@ -802,9 +803,13 @@ router.put("/:id", owner, upload.single("avatar"), async (req, res) => {
       throw e;
     }
 
-    // A changed password signs out every Face ID device (they must re-enroll).
+    // A changed password signs out every other session and Face ID device. The caller gets
+    // a brand-new session in the response so they stay signed in.
+    let newSession = null;
     if (updates.password) {
       await BiometricDevices.destroy({ where: { userId } });
+      await tokens.revokeAllRefreshTokens(userId);
+      newSession = await tokens.issueSession(userId);
     }
 
     // Best-effort cleanup of the previous Cloudinary avatar, only after the save succeeded.
@@ -814,7 +819,10 @@ router.put("/:id", owner, upload.single("avatar"), async (req, res) => {
       );
     }
 
-    return res.status(200).json(safeUserJson(updatedUser));
+    return res.status(200).json({
+      ...safeUserJson(updatedUser),
+      ...(newSession ? { session: newSession } : {}),
+    });
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({ message: "Internal server error" });

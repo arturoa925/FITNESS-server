@@ -3,6 +3,7 @@ const Calendar = require("./Calendar");
 const DailyWorkout = require("./DailyWorkout");
 const TrainingPrograms = require("./TrainingPrograms");
 const BiometricDevices = require("./BiometricDevices");
+const RefreshTokens = require("./RefreshTokens");
 
 // Associations
 
@@ -46,10 +47,14 @@ BiometricDevices.belongsTo(Users, {
     onDelete: "CASCADE",
 });
 
+Users.hasMany(RefreshTokens, { foreignKey: "userId", onDelete: "CASCADE" });
+RefreshTokens.belongsTo(Users, { foreignKey: "userId", onDelete: "CASCADE" });
+
 module.exports = {
     Users,
     Calendar,
     DailyWorkout,
     TrainingPrograms,
     BiometricDevices,
+    RefreshTokens,
 };
