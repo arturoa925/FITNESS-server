@@ -139,7 +139,26 @@ GITHUB_REDIRECT_URI=http://localhost:3004/auth/github/callback
 # Where OAuth sends users back to
 CLIENT_WEB_URL=http://localhost:5173
 MOBILE_REDIRECT_SCHEME=arturofit
+
+# --- Security / deployment (all optional) ---
+# Extra browser origins allowed by CORS (comma separated). CLIENT_WEB_URL is allowed automatically.
+# ALLOWED_ORIGINS=https://app.example.com
+# OAuth only redirects (with the login token) to: arturofit://, MOBILE_REDIRECT_SCHEME://, exp:// (non-production),
+# or URLs starting with an entry below (comma separated).
+# OAUTH_ALLOWED_REDIRECTS=https://app.example.com/oauth-complete
+# Number of reverse-proxy hops in front of the server (default 1 in production, 0 otherwise).
+# Needed for per-IP rate limiting to work behind Render/Heroku/nginx.
+# TRUST_PROXY=1
+# DATABASE_URL connections verify the TLS certificate by default. Only for self-signed hosts:
+# DB_SSL_REJECT_UNAUTHORIZED=false
+# Local database host/port overrides (defaults: localhost / 5432)
+# DB_HOST=localhost
+# DB_PORT=5432
+# `npm run seed` DROPS ALL TABLES and refuses to run when NODE_ENV=production unless:
+# ALLOW_SEED=true
 ```
+
+`JWT_SECRET` is required (min. 16 characters); the server exits at startup without it.
 
 > Postgres folds unquoted names to lowercase, so `CREATE DATABASE FITNESSapp` creates a database named `fitnessapp`. Set `DB_NAME` to match.
 
@@ -237,3 +256,13 @@ curl http://localhost:3004/users/<userId>/calendar?month=11&year=2026 \
 ## Author
 
 **Arturo Ayala**: [GitHub](https://github.com/arturoa925) · [LinkedIn](https://linkedin.com/in/arturo-ayala-775493187)
+
+## Tests
+
+`npm test` runs `tests/e2e.js`, an end-to-end suite (58 checks: auth, ownership/IDOR, validation, OAuth redirect safety, concurrency) against a **running server on a freshly seeded database**:
+
+```bash
+npm run seed && npm start &   # in another terminal
+BASE_URL=http://localhost:3004 npm test
+```
+(The suite needs `GOOGLE_CLIENT_ID`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_REDIRECT_URI` set on the server for the OAuth checks, and no `OPENAI_API_KEY` for the AI-unavailable check.)

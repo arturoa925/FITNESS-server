@@ -6,6 +6,11 @@ const dailyWorkoutData = require("./dailyworkout.json");
 const sequelize = require("../config/connection");
 
 const seedDatabase = async () => {
+// sync({ force: true }) DROPS every table. Never allow it against production by accident.
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED !== "true") {
+    console.error("Refusing to seed: NODE_ENV=production. Set ALLOW_SEED=true to override.");
+    process.exit(1);
+}
 try {
     await sequelize.sync({ force: true });
 

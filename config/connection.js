@@ -8,7 +8,9 @@ const sequelize = process.env.DATABASE_URL
       dialectOptions: {
         ssl: {
           require: true, // Ensure SSL is required
-          rejectUnauthorized: false, // For self-signed certificates (like Render's PostgreSQL)
+          // Verify the server cert by default. Set DB_SSL_REJECT_UNAUTHORIZED=false
+          // only if your host uses a self-signed certificate.
+          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== "false",
         },
       },
       pool: {
@@ -19,7 +21,8 @@ const sequelize = process.env.DATABASE_URL
       },
     })
   : new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PW, {
-      host: "localhost",
+      host: process.env.DB_HOST || "localhost",
+      port: Number(process.env.DB_PORT) || 5432,
       dialect: "postgres",
     });
 module.exports = sequelize;
